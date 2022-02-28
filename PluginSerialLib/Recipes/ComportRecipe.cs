@@ -5,14 +5,14 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using PluginSerialFW;
+using PluginSerialLib;
 
-namespace PluginSerial.Recipes
+namespace PluginSerialLib.Recipes
 {
     public class ComportRecipe : SerialPortRecipe
     {
 
-        public string Port { get; private set; }
+        public string Port { get;  set; }
 
         private Process proc = null;
 
@@ -25,15 +25,17 @@ namespace PluginSerial.Recipes
             }
         }
 
-
-
-
-        public override void Invoke(string currentPort)
+        public void KillProcess()
         {
-            if(!currentPort.Equals(Port)) return; //sanity check
-
-
-            proc = ShellInvoker.CreateAndInvokeProcess(ProcessPath, ProcessArguments, currentPort);
+            proc.Kill();
         }
+
+
+        public override bool RecipeIsValid(SerialPortInst port)
+        {
+            return port.Port.Equals(Port);
+        }
+
+
     }
 }

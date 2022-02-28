@@ -6,7 +6,7 @@ using System.Text;
 using System.Text.RegularExpressions;
 using NLog;
 
-namespace PluginSerial
+namespace PluginSerialLib
 {
     public static class SerialPortSearcher
     {

@@ -6,7 +6,7 @@ using System.Text;
 using System.Text.RegularExpressions;
 using NLog;
 
-namespace PluginSerial
+namespace PluginSerialLib
 {
     public class SerialPortInst
     {
@@ -24,6 +24,7 @@ namespace PluginSerial
         public readonly string HardwareID;
         public readonly PortType Type;
 
+       
         public bool valid { get; protected set; } = true;
 
         public SerialPortInst(string port, string friendlyName, string hardwareID, PortType type)
@@ -33,9 +34,6 @@ namespace PluginSerial
             HardwareID = hardwareID;
             Type = type;
             if (!int.TryParse(GetNumbers(port), out PortNumber)) valid = false;
-
-
-
         }
 
 
@@ -88,7 +86,7 @@ namespace PluginSerial
                 }
                 catch (Exception ex)
                 {
-                    logger.Error("Error parsing USB serial HardwareID", ex);
+                    logger.Error(ex, "Error parsing USB serial HardwareID");
                 }
             }
 

@@ -1,97 +1,107 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Management.Instrumentation;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
-using PluginSerial;
+using System.Windows.Forms;
+using NLog;
+using PluginSerialLib;
 
-namespace PluginSerialFW
+namespace PluginSerialLib
 {
     public sealed class SerialPortManager
     {
+
+        private static Logger logger = LogManager.GetCurrentClassLogger();
         private static SerialPortManager instance;
 
         private Dictionary<string, SerialPortInst> currentPorts;
+        private Mutex mutex = new Mutex();
 
-        private List<SerialPortRecipe> recipeCollection = new List<SerialPortRecipe>();
 
-        public EventHandler<QueryRecipeEventartargs> OnQueryRecipeExecution;
+        public EventHandler<PortChangedEventArgs> OnPortAdded;
+        public EventHandler<PortChangedEventArgs> OnPortRemoved;
 
-        public void AddRecipe(SerialPortRecipe recipe)
-        {
-            recipeCollection.Add(recipe);
-        }
+
         private SerialPortManager()
         {
             currentPorts = SerialPortSearcher.FindSerialPortsWMI(); //init currentPorts  
+
+
         }
 
-        public void Refresh()
+        public void SubscribeWMI()
+        {
+            DeviceChangeNotifier.Start();
+            DeviceChangeNotifier.DeviceNotify += OnDeviceChange;
+        }
+
+        private void OnDeviceChange(Message msg)
+        {
+            Thread scanThread = new Thread(
+                delegate () { Scan(); });
+            scanThread.Start();
+        }
+
+        public void UnsubscribeWMI()
+        {
+            DeviceChangeNotifier.DeviceNotify -= OnDeviceChange;
+        }
+
+        public void ReIndex()
         {
             currentPorts = SerialPortSearcher.FindSerialPortsWMI(); //init currentPorts  
         }
 
         public void Scan()
         {
+            mutex.WaitOne();   // Wait until it is safe to enter. 
+
             Dictionary<string, SerialPortInst> newPorts = SerialPortSearcher.FindSerialPortsWMI(); //init currentPorts
 
-            var removedPorts = currentPorts.Except(newPorts);
-            var addedPorts = newPorts.Except(currentPorts);
+            var removedPorts = currentPorts.Except(newPorts, new KeyComparer<string,SerialPortInst>());
+            var addedPorts = newPorts.Except(currentPorts, new KeyComparer<string, SerialPortInst>());
+
+            logger.Trace($"current ports:"); 
+            foreach (var port in currentPorts)
+            {
+                logger.Trace($"\t port {port.Value.Port}");
+            }
+
+            logger.Trace($"Removing ports:");
+            foreach (var removedPort in removedPorts)
+            {
+                logger.Trace($"\t port {removedPort.Value.Port}");
+            }
+            logger.Trace($"Adding ports:");
+            foreach (var addedPort in addedPorts)
+            {
+                logger.Trace($"\t port {addedPort.Value.Port}");
+            }
+
+
 
             foreach (var removedPort in removedPorts)
             {
-                HandleRemovedPort(removedPort.Value);
+                OnPortRemoved.Invoke(this, new PortChangedEventArgs(removedPort.Value));
+
             }
 
             foreach (var addedPort in addedPorts)
             {
-                HandleNewPort(addedPort.Value);
+                OnPortAdded.Invoke(this, new PortChangedEventArgs(addedPort.Value));
             }
 
             currentPorts = newPorts;
 
-        }
-
-        private void HandleRemovedPort(SerialPortInst removedPort)
-        {
+            mutex.ReleaseMutex();
 
         }
 
-        private void HandleNewPort(SerialPortInst addedPort)
-        {
-            List<SerialPortRecipe> availableRecipes = new List<SerialPortRecipe>();
-            foreach (SerialPortRecipe serialPortRecipe in recipeCollection)
-            {
-                if (serialPortRecipe.RecipeIsValid(addedPort))
-                {
-                    if (serialPortRecipe.runType == RecipeRuntype.AutorunFinal)
-                    {
-                        serialPortRecipe.TryInvokeRecipe(addedPort);
-                        return;
-                    }
 
-                    if (serialPortRecipe.runType != RecipeRuntype.Disabled)
-                    {
-                        availableRecipes.Add(serialPortRecipe);
-                    }
-
-                }
-            }
-
-            if (availableRecipes.Count == 1)
-            {
-                SerialPortRecipe recipe = availableRecipes.First();
-                if (recipe.runType == RecipeRuntype.AutoRunIfOnly)
-                {
-                    recipe.TryInvokeRecipe(addedPort);
-                }
-            }
-
-
-
-
-        }
 
         public static SerialPortManager GetSerialPortManager()
         {
@@ -103,17 +113,32 @@ namespace PluginSerialFW
             return instance;
         }
 
+        public class PortChangedEventArgs
+        {
+            public readonly SerialPortInst Port;
+            public PortChangedEventArgs(SerialPortInst port)
+            {
+                Port = port;
+            }
+        }
+
 
     }
 
-    public class QueryRecipeEventartargs : EventArgs
+
+    class KeyComparer<T1, T2> : IEqualityComparer<KeyValuePair<T1, T2>>
+        where T1 : IComparable
     {
-        public readonly List<SerialPortRecipe> availableRecipes;
-        public readonly SerialPortInst portinst;
-        public QueryRecipeEventartargs(List<SerialPortRecipe> availableRecipes, SerialPortInst port)
+        public bool Equals(KeyValuePair<T1, T2> x, KeyValuePair<T1, T2> y)
         {
-            this.availableRecipes = availableRecipes;
-            portinst = port;
+            //Check whether the keys are equal
+            return x.Key.Equals(y.Key);
+        }
+
+        // GetHashCode() must return the same value for equal objects.
+        public int GetHashCode(KeyValuePair<T1, T2> kVPair)
+        {
+            return kVPair.Key.GetHashCode();
         }
     }
 }

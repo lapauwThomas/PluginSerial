@@ -6,9 +6,9 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using NLog;
-using PluginSerialFW;
+using PluginSerialLib;
 
-namespace PluginSerial.Recipes
+namespace PluginSerialLib
 {
     public class ShellInvoker
     {
@@ -46,10 +46,14 @@ namespace PluginSerial.Recipes
             {
                 if (arg.Contains(SerialPortRecipe.serialPlaceholderString))
                 {
-                    arg.Replace(SerialPortRecipe.serialPlaceholderString, serialport);
+                    sb.Append(" " + arg.Replace(SerialPortRecipe.serialPlaceholderString, serialport));
+                }
+                else
+                {
+                    sb.Append(" " + arg);
                 }
 
-                sb.Append(" " + arg);
+
             }
 
             string processArguments = sb.ToString();
@@ -60,7 +64,7 @@ namespace PluginSerial.Recipes
 
             System.Diagnostics.Process process = new System.Diagnostics.Process();
             System.Diagnostics.ProcessStartInfo startInfo = new System.Diagnostics.ProcessStartInfo();
-            startInfo.WindowStyle = System.Diagnostics.ProcessWindowStyle.Hidden;
+            startInfo.WindowStyle = System.Diagnostics.ProcessWindowStyle.Normal;
             startInfo.FileName = processPathFull;
             startInfo.Arguments = processArguments;
             process.StartInfo = startInfo;
