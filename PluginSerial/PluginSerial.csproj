@@ -84,16 +84,6 @@
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </ApplicationDefinition>
-    <Compile Include="PathExeHelper.cs" />
-    <Compile Include="Recipes\ComportRecipe.cs" />
-    <Compile Include="Recipes\DeviceRecipe.cs" />
-    <Compile Include="Recipes\ShellInvoker.cs" />
-    <Compile Include="Recipes\UniversalRecipe.cs" />
-    <Compile Include="Recipes\VidPidRecipe.cs" />
-    <Compile Include="SerialPortInst.cs" />
-    <Compile Include="SerialPortManager.cs" />
-    <Compile Include="Recipes\SerialPortRecipe.cs" />
-    <Compile Include="SerialPortSearcher.cs" />
     <Page Include="MainWindow.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>

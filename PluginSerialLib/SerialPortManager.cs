@@ -18,7 +18,10 @@ namespace PluginSerialFW
 
         public EventHandler<QueryRecipeEventartargs> OnQueryRecipeExecution;
 
-
+        public void AddRecipe(SerialPortRecipe recipe)
+        {
+            recipeCollection.Add(recipe);
+        }
         private SerialPortManager()
         {
             currentPorts = SerialPortSearcher.FindSerialPortsWMI(); //init currentPorts  

@@ -5,6 +5,10 @@ VisualStudioVersion = 16.0.30621.155
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PluginSerial", "PluginSerial\PluginSerial.csproj", "{68FE263F-0451-46BB-8FFB-4AD258DDAA1B}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PluginSerialLib", "PluginSerialLib\PluginSerialLib.csproj", "{DF1922F8-71A5-474C-8D60-3AF2762D8C02}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PluginSerialConsoleTester", "PluginSerialConsoleTester\PluginSerialConsoleTester.csproj", "{65EE1339-3837-4F20-B55D-90E51A5B1643}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -15,6 +19,14 @@ Global
 		{68FE263F-0451-46BB-8FFB-4AD258DDAA1B}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{68FE263F-0451-46BB-8FFB-4AD258DDAA1B}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{68FE263F-0451-46BB-8FFB-4AD258DDAA1B}.Release|Any CPU.Build.0 = Release|Any CPU
+		{DF1922F8-71A5-474C-8D60-3AF2762D8C02}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{DF1922F8-71A5-474C-8D60-3AF2762D8C02}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{DF1922F8-71A5-474C-8D60-3AF2762D8C02}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{DF1922F8-71A5-474C-8D60-3AF2762D8C02}.Release|Any CPU.Build.0 = Release|Any CPU
+		{65EE1339-3837-4F20-B55D-90E51A5B1643}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{65EE1339-3837-4F20-B55D-90E51A5B1643}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{65EE1339-3837-4F20-B55D-90E51A5B1643}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{65EE1339-3837-4F20-B55D-90E51A5B1643}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
