@@ -36,19 +36,19 @@ namespace PluginSerialLib
                         {
                             var caption = queryObj["Caption"].ToString();
 
-                                logger.Trace($"Found Port with CAPTION: [{caption}]");
-                                var newPort = TryparseQueryObjectToSerialPort(queryObj);
-                                if (newPort!= null && newPort.valid)
-                                {
-                                    FoundPorts.Add(newPort.Port, newPort);
-                                    logger.Debug($"Registered serialport {newPort.Port}");
-                                }
+                            logger.Trace($"Found Port with CAPTION: [{caption}]");
+                            var newPort = TryparseQueryObjectToSerialPort(queryObj);
+                            if (newPort != null && newPort.valid)
+                            {
+                                FoundPorts.Add(newPort.Port, newPort);
+                                logger.Debug($"Registered serialport {newPort.Port}");
+                            }
 
-                            
+
 
                         }
                     }
-                    catch(Exception ex)
+                    catch (Exception ex)
                     {
                         logger.Error(ex, "Error on queryObj");
                     }
@@ -72,7 +72,23 @@ namespace PluginSerialLib
 
             string friendlyName = (string)managementObject["Name"];
             string port;
-            string hardwareID = (string)managementObject["PNPDeviceID"];
+            string instancePath = (string)managementObject["PNPDeviceID"];
+            string hwid = string.Empty;
+
+            try
+            {
+                string[] arrHardwareID = (string[])(managementObject["HardwareID"]);
+
+                if (arrHardwareID.Length > 0)
+                {
+                    hwid = arrHardwareID[0];
+                }
+            }
+            catch (Exception ex)
+            {
+                logger.Warn($"Could not get HWID");
+            }
+
             try
             {
                 port = Regex.Match(friendlyName, @"\((COM[0-9]*)(.*)\)").Groups[1].Value;
@@ -92,16 +108,20 @@ namespace PluginSerialLib
             }
 
             SerialPortInst.PortType type = SerialPortInst.PortType.Unknown;
-            switch (managementObject["Service"].ToString())
+            string service = managementObject["Service"].ToString();
+            if (ConfigManager.ServiceDescriptions.NativeSerialDescriptionList.Contains(service))
             {
-                case "Serial":
-                    return new SerialPortInst(port, friendlyName, hardwareID, SerialPortInst.PortType.Native);
-                case "usbser":
-                    return new UsbSerialPortInst(port, friendlyName, hardwareID);
-                default:
-                    return new SerialPortInst(port, friendlyName, hardwareID, SerialPortInst.PortType.Unknown);
-
+                var inst = new SerialPortInst(port, friendlyName, hwid, instancePath, SerialPortInst.PortType.Native);
+                return inst;
             }
+            if (ConfigManager.ServiceDescriptions.USBSerialDescriptionList.Contains(service))
+            {
+                var inst = new UsbSerialPortInst(port, friendlyName, hwid, instancePath);
+                return inst;
+            }
+
+            return new SerialPortInst(port, friendlyName, hwid, instancePath, SerialPortInst.PortType.Unknown);
+
 
         }
 

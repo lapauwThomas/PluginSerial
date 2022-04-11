@@ -22,18 +22,23 @@ namespace PluginSerialLib
         public readonly string Port;
         public readonly string FriendlyName;
         public readonly string HardwareID;
+        public readonly string InstancePath;
         public readonly PortType Type;
 
        
         public bool valid { get; protected set; } = true;
 
-        public SerialPortInst(string port, string friendlyName, string hardwareID, PortType type)
+        public SerialPortInst(string port, string friendlyName, string hardwareID, string instancePath, PortType type)
         {
             Port = port;
             FriendlyName = friendlyName;
             HardwareID = hardwareID;
+            InstancePath = instancePath;
             Type = type;
             if (!int.TryParse(GetNumbers(port), out PortNumber)) valid = false;
+
+
+            logger.Debug($"Created Serial port {Port} for of type {type.ToString()} at path [{instancePath}] { (valid? "" : "INVALID")}");
         }
 
 
@@ -49,45 +54,48 @@ namespace PluginSerialLib
 
         public readonly int VID;
         public readonly int PID;
-        public readonly string SerialNumber;
+        public readonly string InstancePath;
 
-        public UsbSerialPortInst(string port, string friendlyName, string hardwareID) : base(port, friendlyName, hardwareID, PortType.USB)
+        public UsbSerialPortInst(string port, string friendlyName, string hardwareID, string instancePath) : base(port, friendlyName, hardwareID, instancePath, PortType.USB)
         {
-            if (!usbserParseDeviceId(hardwareID, out VID, out PID, out SerialNumber)) valid = false;
+            if (!usbserParseDeviceId(hardwareID, out VID, out PID)) valid = false;
+            valid = true;
 
         }
 
-        private static bool usbserParseDeviceId(string deviceID, out int VID, out int PID, out string serial)
+        private static bool usbserParseDeviceId(string deviceID, out int VID, out int PID)
         {
 
             VID = 0;
             PID = 0;
-            serial = "ERROR";
 
-            Regex _rx = new Regex(@"VID_([0-9A-F]+)&PID_([0-9A-F]+)\\([0-9A-F]+)", RegexOptions.IgnoreCase);
-            var match = _rx.Match(deviceID.ToUpperInvariant());
-            if (match.Success)
+            foreach (string pattern in ConfigManager.USBVIDPIDRegexList)
             {
-                try
+                Regex _rx = new Regex(pattern, RegexOptions.IgnoreCase);
+                var match = _rx.Match(deviceID.ToUpperInvariant());
+                if (match.Success)
                 {
-                    string VIDcapture = match.Groups[1].Value;
+                    try
+                    {
+                        string VIDcapture = match.Groups[1].Value;
 
-                    if (!int.TryParse(VIDcapture, NumberStyles.HexNumber,
-                        CultureInfo.InvariantCulture, out VID)) return false;
+                        if (!int.TryParse(VIDcapture, NumberStyles.HexNumber,
+                            CultureInfo.InvariantCulture, out VID)) continue;
 
 
-                    string PIDcapture = match.Groups[2].Value;
-                    if (!int.TryParse(PIDcapture, NumberStyles.HexNumber,
-                        CultureInfo.InvariantCulture, out PID)) return false;
+                        string PIDcapture = match.Groups[2].Value;
+                        if (!int.TryParse(PIDcapture, NumberStyles.HexNumber,
+                            CultureInfo.InvariantCulture, out PID)) continue;
 
-                    serial = match.Groups[3].Value;
-                    logger.Debug($"Parsed HWID for VID [{VID:X4}] PID [{PID:X4}] serial [{serial}]");
-                    return true;
+                        logger.Debug($"Parsed HWID for VID [{VID:X4}] PID [{PID:X4}]");
+                        return true;
+                    }
+                    catch (Exception ex)
+                    {
+                        logger.Error(ex, "Error parsing USB serial HardwareID");
+                    }
                 }
-                catch (Exception ex)
-                {
-                    logger.Error(ex, "Error parsing USB serial HardwareID");
-                }
+
             }
 
             return false;
