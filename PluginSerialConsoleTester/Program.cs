@@ -11,6 +11,10 @@ using NLog;
 using PluginSerialLib.Recipes;
 
 using PluginSerialLib;
+using System.IO;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Serialization;
+using System.Reflection;
 
 namespace PluginSerialConsoleTester
 {
@@ -40,7 +44,11 @@ namespace PluginSerialConsoleTester
 
 
             SerialPortManager.GetSerialPortManager().SubscribeWMI();
-            RecipeManager recipeManager = new RecipeManager();
+
+
+            string exePath = Path.GetDirectoryName(Application.ExecutablePath);
+            string recipePath = Path.Combine(exePath, "Recipes");
+            RecipeManager recipeManager = new RecipeManager(recipePath);
 
 
             ComportRecipe recipe = new ComportRecipe
@@ -51,10 +59,33 @@ namespace PluginSerialConsoleTester
                 Icon = SystemIcons.Hand,
                 ProcessPath = @"PuTTY.exe",
                 ProcessArguments = new List<string>{@"-serial {PORT}", @"-sercfg 57600,8,n,1,N"},
-                Port = "COM3",
+                Port = "COM7",
                 KillOnDisconnect = true
             };
-            recipeManager.AddRecipe(recipe);
+            //recipeManager.AddRecipe(recipe);
+
+
+
+
+            KnownTypesBinder knownTypesBinder = new KnownTypesBinder();
+
+            //foreach (Type type in Assembly.GetAssembly(typeof(SerialPortRecipe)).GetTypes()
+            //.Where(myType => myType.IsClass && !myType.IsAbstract && myType.IsSubclassOf(typeof(SerialPortRecipe))))
+            //{
+            //    knownTypesBinder.AddType(type);
+            //}
+            ////knownTypesBinder.AddType(typeof(SerialPortRecipe.ProcessArguments).GetType(), "ProcessArgumentList");
+
+            RecipeSerializer recipeSerializer = new RecipeSerializer();
+
+
+            string filename = Path.ChangeExtension(recipe.Name, ".json");
+            string outputFile = Path.Combine(recipePath, filename);
+            recipeSerializer.RecipeToFile(recipe, outputFile);
+
+            SerialPortRecipe recipeDeserial = recipeSerializer.RecipeFromFIle(outputFile);
+
+            recipeManager.AddRecipe(recipeDeserial);
 
             Thread notifyThread = new Thread(
                 delegate ()
@@ -93,6 +124,32 @@ namespace PluginSerialConsoleTester
         {
             notificationIcon.Dispose();
             Application.Exit();
+        }
+
+        public class KnownTypesBinder : ISerializationBinder
+        {
+            public Dictionary<string, Type> KnownTypes { get; set; } = new Dictionary<string,Type>();
+
+            public void AddType(Type type)
+            {
+                KnownTypes.Add(type.GetType().Name, type);
+            }
+            public void AddType(Type type, string name )
+            {
+                KnownTypes.Add(name, type);
+            }
+
+
+            public Type BindToType(string assemblyName, string typeName)
+            {
+                return KnownTypes.SingleOrDefault(t => t.Key == typeName).Value;
+            }
+
+            public void BindToName(Type serializedType, out string assemblyName, out string typeName)
+            {
+                assemblyName = null;
+                typeName = serializedType.Name;
+            }
         }
     }
 }

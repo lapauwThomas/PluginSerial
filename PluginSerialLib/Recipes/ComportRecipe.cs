@@ -5,30 +5,18 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Newtonsoft.Json;
 using PluginSerialLib;
 
 namespace PluginSerialLib.Recipes
 {
+    [JsonObject(MemberSerialization.OptIn)]
     public class ComportRecipe : SerialPortRecipe
     {
-
+        [JsonProperty]
         public string Port { get;  set; }
 
         private Process proc = null;
-
-
-        public bool ProcessRunning
-        {
-            get
-            {
-                return ! (proc?.HasExited ?? true);
-            }
-        }
-
-        public void KillProcess()
-        {
-            proc.Kill();
-        }
 
 
         public override bool RecipeIsValid(SerialPortInst port)

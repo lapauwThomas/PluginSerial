@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading;
@@ -19,22 +20,53 @@ namespace PluginSerialLib
         public EventHandler<QueryRecipeEventArgs> OnQueryRecipeExecution;
         public EventHandler<RecipeExecutedEventArgs> OnRecipeExecuted;
 
-        public RecipeManager()
+        public readonly string RecipeFolderPath;
+        FileSystemWatcher folderWatcher;
+
+        public RecipeManager(string recipeFolderPath)
         {
             SerialPortManager mgr = SerialPortManager.GetSerialPortManager();
             mgr.OnPortAdded += HandleNewPort;
             mgr.OnPortRemoved += HandleRemovedPort;
             recipeCollection =  new List<SerialPortRecipe>();
 
+            RecipeFolderPath = recipeFolderPath;
+            if (!Directory.Exists(RecipeFolderPath))
+            {
+                Directory.CreateDirectory(RecipeFolderPath);
+            }
+
+            folderWatcher = new FileSystemWatcher(RecipeFolderPath);
+
+            folderWatcher.NotifyFilter = NotifyFilters.Attributes
+                                 | NotifyFilters.CreationTime
+                                 | NotifyFilters.FileName
+                                 | NotifyFilters.LastAccess
+                                 | NotifyFilters.LastWrite;
+
+
+            folderWatcher.Changed += OnRecipesChanged;
+            folderWatcher.Filter = "*.json";
+
+
         }
 
-        public RecipeManager(IEnumerable<SerialPortRecipe> recipes)
+
+
+        public RecipeManager(IEnumerable<SerialPortRecipe> recipes) : this(new List<SerialPortRecipe>())
+        {
+
+
+        }
+
+        public RecipeManager(List<SerialPortRecipe> recipes)
         {
             SerialPortManager mgr = SerialPortManager.GetSerialPortManager();
             mgr.OnPortAdded += HandleNewPort;
             mgr.OnPortRemoved += HandleRemovedPort;
             recipeCollection = recipes.ToList();
         }
+
 
         public void AddRecipe(SerialPortRecipe recipe)
         {
@@ -49,6 +81,20 @@ namespace PluginSerialLib
                 runningRecipes[removedPort.Port].KillProcess();
                 runningRecipes.Remove(removedPort.Port);
             }
+        }
+
+        private void OnRecipesChanged(object sender, FileSystemEventArgs e)
+        {
+            if (e.ChangeType != WatcherChangeTypes.Changed)
+            {
+                return;
+            }
+            Console.WriteLine($"Changed: {e.FullPath}");
+        }
+
+        private void ReloadRecipes(string path)
+        {
+
         }
 
         private void HandleNewPort(object sender, SerialPortManager.PortChangedEventArgs args)

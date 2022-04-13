@@ -16,7 +16,7 @@ namespace PluginSerialLib
 
 
 
-        public static Process CreateAndInvokeProcess(string ProcessPath, List<string> ProcessArguments, string serialport)
+        public static Process CreateAndInvokeProcess(string ProcessPath, IList<string> ProcessArguments, string serialport)
         {
 
             if (ProcessPath == null || string.IsNullOrEmpty(ProcessPath))
