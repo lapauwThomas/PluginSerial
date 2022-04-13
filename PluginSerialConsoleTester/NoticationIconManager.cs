@@ -4,9 +4,9 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace PluginSerialLib.Recipes
+namespace PluginSerialConsoleTester
 {
-    class DeviceRecipe
+    internal class NoticationIconManager
     {
     }
 }

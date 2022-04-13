@@ -7,30 +7,28 @@ using Newtonsoft.Json;
 
 namespace PluginSerialLib.Recipes
 {
-
     [JsonObject(MemberSerialization.OptIn)]
-    public class VidPidRecipe : SerialPortRecipe
+    public class VidRecipe : SerialPortRecipe
     {
         [JsonObject]
-        public class VidPidFilter
+        public class VidFilter
         {
             public string VID { get; set; }
-            public string PID { get; set; }
 
-            public VidPidFilter(string vid, string pid)
+            public VidFilter(string vid)
             {
                 VID = vid;
-                PID = pid;
             }
         }
 
-        [JsonProperty] public VidPidFilter Filter;
+        [JsonProperty] public VidFilter Filter;
+
 
         public override bool RecipeIsValid(SerialPortInst port)
         {
             if (port is UsbSerialPortInst usbSerial)
             {
-                return usbSerial.VID.Equals(Filter.VID) && usbSerial.PID.Equals(Filter.PID); ;
+                return usbSerial.VID.Equals(Filter.VID);
             }
 
             return false;

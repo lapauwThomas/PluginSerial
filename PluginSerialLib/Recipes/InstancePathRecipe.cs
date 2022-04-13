@@ -1,37 +1,35 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using Newtonsoft.Json;
-using PluginSerialLib;
 
 namespace PluginSerialLib.Recipes
 {
     [JsonObject(MemberSerialization.OptIn)]
-    public class ComportRecipe : SerialPortRecipe
+    public class InstancePathRecipe : SerialPortRecipe
     {
 
+      
 
+        [JsonProperty] public InstancePathFilter Filter;
         public override bool RecipeIsValid(SerialPortInst port)
         {
-            return port.Port.Equals(Filter.Port);
+            return port.InstancePath.Equals(Filter.InstancePath);
         }
 
         [JsonObject]
-        public class ComportFilter
+        public class InstancePathFilter
         {
-            public string Port { get; set; }
+            public string InstancePath { get; set; }
 
-            public ComportFilter(string port)
+            public InstancePathFilter(string instancePath)
             {
-                Port = port;
+                InstancePath = instancePath;
             }
         }
-
-        [JsonProperty] public ComportFilter Filter;
 
     }
 }

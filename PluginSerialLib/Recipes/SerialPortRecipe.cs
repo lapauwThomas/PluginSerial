@@ -80,7 +80,13 @@ namespace PluginSerialLib
 
         public void KillProcess()
         {
-            proc.Kill();
+            if (proc != null && !proc.HasExited)
+            {
+                proc.Kill();
+                proc.WaitForExit();
+                proc.Dispose();
+            }
+
         }
 
 

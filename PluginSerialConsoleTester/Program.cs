@@ -59,15 +59,26 @@ namespace PluginSerialConsoleTester
                 Icon = SystemIcons.Hand,
                 ProcessPath = @"PuTTY.exe",
                 ProcessArguments = new List<string>{@"-serial {PORT}", @"-sercfg 57600,8,n,1,N"},
-                Port = "COM7",
+                Filter =new ComportRecipe.ComportFilter("COM6"),
                 KillOnDisconnect = true
             };
-            //recipeManager.AddRecipe(recipe);
+            recipeManager.AddRecipe(recipe);
 
 
+            VidPidRecipe vidpidrecipe = new VidPidRecipe
+            {
+                Name = "VidPidRecipe",
+                Description = "This is a test description",
+                RunType = RecipeRuntype.AutoRunIfOnly,
+                Icon = SystemIcons.Hand,
+                ProcessPath = @"PuTTY.exe",
+                ProcessArguments = new List<string> { @"-serial {PORT}", @"-sercfg 115200,8,n,1,N" },
+                Filter = new VidPidRecipe.VidPidFilter("0403", "6001"),
+                KillOnDisconnect = true
+            };
+            recipeManager.AddRecipe(vidpidrecipe);
 
-
-            KnownTypesBinder knownTypesBinder = new KnownTypesBinder();
+            //KnownTypesBinder knownTypesBinder = new KnownTypesBinder();
 
             //foreach (Type type in Assembly.GetAssembly(typeof(SerialPortRecipe)).GetTypes()
             //.Where(myType => myType.IsClass && !myType.IsAbstract && myType.IsSubclassOf(typeof(SerialPortRecipe))))
@@ -76,25 +87,29 @@ namespace PluginSerialConsoleTester
             //}
             ////knownTypesBinder.AddType(typeof(SerialPortRecipe.ProcessArguments).GetType(), "ProcessArgumentList");
 
-            RecipeSerializer recipeSerializer = new RecipeSerializer();
+            //RecipeSerializer recipeSerializer = new RecipeSerializer();
 
 
-            string filename = Path.ChangeExtension(recipe.Name, ".json");
-            string outputFile = Path.Combine(recipePath, filename);
-            recipeSerializer.RecipeToFile(recipe, outputFile);
+            //string filename = Path.ChangeExtension(recipe.Name, ".json");
+            //string outputFile = Path.Combine(recipePath, filename);
+            //recipeSerializer.RecipeToFile(recipe, outputFile);
 
-            SerialPortRecipe recipeDeserial = recipeSerializer.RecipeFromFIle(outputFile);
+            //SerialPortRecipe recipeDeserial = recipeSerializer.RecipeFromFile(outputFile);
 
-            recipeManager.AddRecipe(recipeDeserial);
+            //recipeManager.AddRecipe(recipeDeserial);
+
+
 
             Thread notifyThread = new Thread(
                 delegate ()
                 {
                     menu = new ContextMenu();
+                    
                     mnuExit = new MenuItem("Exit");
                     menu.MenuItems.Add(0, mnuExit);
 
-                    notificationIcon = new NotifyIcon()
+
+                        notificationIcon = new NotifyIcon()
                     {
                         Icon = SystemIcons.Hand,
                         ContextMenu = menu,

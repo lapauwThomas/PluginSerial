@@ -19,7 +19,8 @@ namespace PluginSerialLib
                     foreach (string test in (Environment.GetEnvironmentVariable("PATH") ?? "").Split(';'))
                     {
                         string path = test.Trim();
-                        if (!String.IsNullOrEmpty(path) && File.Exists(path = Path.Combine(path, exe)))
+                        path = Path.Combine(path, exe);
+                        if (File.Exists(path))
                         {
                             fullpath = Path.GetFullPath(path);
                             return true;

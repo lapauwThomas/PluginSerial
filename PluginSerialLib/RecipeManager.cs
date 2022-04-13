@@ -7,6 +7,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using NLog;
+using PluginSerialLib.Recipes;
 
 namespace PluginSerialLib
 {
@@ -15,20 +16,22 @@ namespace PluginSerialLib
         private Dictionary<string, SerialPortRecipe> runningRecipes = new Dictionary<string, SerialPortRecipe>();
 
         private static Logger logger = LogManager.GetCurrentClassLogger();
-        private List<SerialPortRecipe> recipeCollection;
+        private RecipeCollection recipeCollection;
 
         public EventHandler<QueryRecipeEventArgs> OnQueryRecipeExecution;
         public EventHandler<RecipeExecutedEventArgs> OnRecipeExecuted;
 
         public readonly string RecipeFolderPath;
+
         FileSystemWatcher folderWatcher;
+        private bool AutoReloadRecipesOnChange { get; set; } = true;
 
         public RecipeManager(string recipeFolderPath)
         {
             SerialPortManager mgr = SerialPortManager.GetSerialPortManager();
             mgr.OnPortAdded += HandleNewPort;
             mgr.OnPortRemoved += HandleRemovedPort;
-            recipeCollection =  new List<SerialPortRecipe>();
+            recipeCollection =  new RecipeCollection();
 
             RecipeFolderPath = recipeFolderPath;
             if (!Directory.Exists(RecipeFolderPath))
@@ -46,11 +49,31 @@ namespace PluginSerialLib
 
 
             folderWatcher.Changed += OnRecipesChanged;
+            //folderWatcher.Created += OnRecipesChanged;
+            //folderWatcher.Deleted += OnRecipesChanged;
+            //folderWatcher.Renamed += OnRecipesChanged;
+
+
             folderWatcher.Filter = "*.json";
+            folderWatcher.EnableRaisingEvents = true;
 
 
         }
 
+
+        public List<SerialPortRecipe> GetAvailableRecipesForPort(SerialPortInst port)
+        {
+            List<SerialPortRecipe> recipelList = new List<SerialPortRecipe>();
+            foreach (var recipe in recipeCollection)
+            {
+                if (recipe.RecipeIsValid(port))
+                {
+                    recipelList.Add(recipe);
+                }
+            }
+
+            return recipelList;
+        }
 
 
         public RecipeManager(IEnumerable<SerialPortRecipe> recipes) : this(new List<SerialPortRecipe>())
@@ -64,7 +87,7 @@ namespace PluginSerialLib
             SerialPortManager mgr = SerialPortManager.GetSerialPortManager();
             mgr.OnPortAdded += HandleNewPort;
             mgr.OnPortRemoved += HandleRemovedPort;
-            recipeCollection = recipes.ToList();
+            recipeCollection = new RecipeCollection(recipes.ToList());
         }
 
 
@@ -85,15 +108,30 @@ namespace PluginSerialLib
 
         private void OnRecipesChanged(object sender, FileSystemEventArgs e)
         {
-            if (e.ChangeType != WatcherChangeTypes.Changed)
-            {
-                return;
-            }
-            Console.WriteLine($"Changed: {e.FullPath}");
+            if (!AutoReloadRecipesOnChange) return;
+
+
+                LoadFromFolder(RecipeFolderPath);
+            
+
         }
 
-        private void ReloadRecipes(string path)
+        private void LoadFromFolder(string path)
         {
+            string[] allfiles = Directory.GetFiles(path, "*.json", SearchOption.TopDirectoryOnly);
+            RecipeSerializer ser = new RecipeSerializer();
+            foreach (string file in allfiles)
+            {
+                try
+                {
+                    recipeCollection.Add(ser.RecipeFromFile(file));
+                    logger.Trace($"Added recipe from file [{file}");
+                }
+                catch (Exception ex)
+                {
+                    logger.Error(ex,$"Could not load recipe from file [{file}");
+                }
+            }
 
         }
 
@@ -113,7 +151,8 @@ namespace PluginSerialLib
 
                     if (serialPortRecipe.RunType != RecipeRuntype.Disabled)
                     {
-                        ExecuteRecipe(serialPortRecipe, addedPort);
+                        availableRecipes.Add(serialPortRecipe);
+                        //ExecuteRecipe(serialPortRecipe, addedPort);
                     }
 
                 }
@@ -126,6 +165,10 @@ namespace PluginSerialLib
                 {
                     ExecuteRecipe(recipe, addedPort);
                 }
+            }
+            else
+            {
+                OnQueryRecipeExecution?.Invoke(this, new QueryRecipeEventArgs(availableRecipes, args.Port));
             }
         }
 

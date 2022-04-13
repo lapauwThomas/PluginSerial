@@ -35,8 +35,12 @@ namespace PluginSerialLib
                 }
                 else
                 {
-                    if (!PathExeHelper.FindExeEnvironmentPath(ProcessPath, out processPathFull)) //scan the environment to check if exe on path
-                        return null;
+                    processPathFull = ProcessPath; //TRIAL to see if on path exes are found
+                    //if (!PathExeHelper.FindExeEnvironmentPath(ProcessPath, out processPathFull)) //scan the environment to check if exe on path
+                    //{
+
+                    //} 
+
                 }
             }
 

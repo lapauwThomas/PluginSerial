@@ -3,10 +3,19 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Newtonsoft.Json;
 
 namespace PluginSerialLib.Recipes
 {
-    class UniversalRecipe
+
+    [JsonObject(MemberSerialization.OptIn)]
+    public class UniversalRecipe : SerialPortRecipe
     {
+     
+        public override bool RecipeIsValid(SerialPortInst port)
+        {
+            return true;
+        }
+
     }
 }

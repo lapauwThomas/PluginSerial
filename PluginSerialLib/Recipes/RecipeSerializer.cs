@@ -40,7 +40,7 @@ namespace PluginSerialLib.Recipes
         {
             File.WriteAllText(path, RecipeToString(recipe));
         }
-        public SerialPortRecipe RecipeFromFIle(string path)
+        public SerialPortRecipe RecipeFromFile(string path)
         {
             string jsontext;
             using (StreamReader file = File.OpenText(path))
