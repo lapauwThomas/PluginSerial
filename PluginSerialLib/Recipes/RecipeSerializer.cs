@@ -11,7 +11,7 @@ using System.IO;
 namespace PluginSerialLib.Recipes
 {
 
-    public  class RecipeSerializer
+    public class RecipeSerializer
     {
 
         JsonSerializerSettings settings = new JsonSerializerSettings { TypeNameHandling = TypeNameHandling.Auto, Formatting = Formatting.Indented };
@@ -22,31 +22,39 @@ namespace PluginSerialLib.Recipes
         }
 
 
-        public string RecipeToString(SerialPortRecipe recipe)
+        public string RecipeToString(RecipeBase recipe)
         {
         
             string Serialized = JsonConvert.SerializeObject(recipe, settings);
             return Serialized;
         }
 
-        public  SerialPortRecipe RecipeFromString(string jsontext)
+        public  RecipeBase RecipeFromString(string jsontext, string name)
         {
 
-            SerialPortRecipe recipeDeserial = JsonConvert.DeserializeObject<SerialPortRecipe>(jsontext, settings);
+            RecipeBase recipeDeserial = JsonConvert.DeserializeObject<RecipeBase>(jsontext, settings);
+            recipeDeserial.Name = name;
             return recipeDeserial;
         }
 
-        public void RecipeToFile(SerialPortRecipe recipe, string path)
+        public void RecipeToFile(RecipeBase recipe, string path, string OverrideFilename = null)
         {
-            File.WriteAllText(path, RecipeToString(recipe));
+            string filename = recipe.Name;
+            if (OverrideFilename != null)
+            {
+                filename = OverrideFilename;
+            } 
+            string filepath = Path.Combine(path, Path.ChangeExtension(filename, ConfigManager.DefaultRecipeExtension));
+            File.WriteAllText(filepath, RecipeToString(recipe));
         }
-        public SerialPortRecipe RecipeFromFile(string path)
+        public RecipeBase RecipeFromFile(string path)
         {
             string jsontext;
             using (StreamReader file = File.OpenText(path))
             {
                 jsontext = file.ReadToEnd();
-                return RecipeFromString(jsontext);
+                string name = Path.GetFileNameWithoutExtension(path);
+                return RecipeFromString(jsontext, name);
             }
         }
     }
@@ -56,7 +64,7 @@ namespace PluginSerialLib.Recipes
     {
         public override bool CanConvert(Type objectType)
         {
-            return typeof(SerialPortRecipe).IsAssignableFrom(objectType);
+            return typeof(RecipeBase).IsAssignableFrom(objectType);
         }
 
         public override object ReadJson(JsonReader reader,
@@ -65,15 +73,15 @@ namespace PluginSerialLib.Recipes
             JObject jo = JObject.Load(reader);
 
             // Using a nullable bool here in case "is_album" is not present on an item
-            string recipeType = (string)jo[nameof(SerialPortRecipe.RecipeType)];
+            string recipeType = (string)jo[nameof(RecipeBase.RecipeType)];
 
-            foreach (Type type in Assembly.GetAssembly(typeof(SerialPortRecipe)).GetTypes()
-                .Where(myType => myType.IsClass && !myType.IsAbstract && myType.IsSubclassOf(typeof(SerialPortRecipe))))
+            foreach (Type type in Assembly.GetAssembly(typeof(RecipeBase)).GetTypes()
+                .Where(myType => myType.IsClass && !myType.IsAbstract && myType.IsSubclassOf(typeof(RecipeBase))))
             {
                 var typeName = type.Name;
                 if (typeName == recipeType)
                 {
-                    var rcp = (SerialPortRecipe)Activator.CreateInstance(type);
+                    var rcp = (RecipeBase)Activator.CreateInstance(type);
                     serializer.Populate(jo.CreateReader(), rcp);
                     return rcp;
                 }

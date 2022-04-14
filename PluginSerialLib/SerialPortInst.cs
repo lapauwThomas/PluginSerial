@@ -28,6 +28,8 @@ namespace PluginSerialLib
        
         public bool valid { get; protected set; } = true;
 
+        public bool IsDisconnected { get; protected set; } = false;
+
         public SerialPortInst(string port, string friendlyName, string hardwareID, string instancePath, PortType type)
         {
             Port = port;
@@ -45,6 +47,14 @@ namespace PluginSerialLib
         private static string GetNumbers(string input)
         {
             return new string(input.Where(c => char.IsDigit(c)).ToArray());
+        }
+
+        /// <summary>
+        /// To be called to mark the port as disconnected
+        /// </summary>
+        public void PortDisconnected()
+        {
+            IsDisconnected = true;
         }
     }
 

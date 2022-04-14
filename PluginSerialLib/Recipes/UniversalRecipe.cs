@@ -9,7 +9,7 @@ namespace PluginSerialLib.Recipes
 {
 
     [JsonObject(MemberSerialization.OptIn)]
-    public class UniversalRecipe : SerialPortRecipe
+    public class UniversalRecipe : RecipeBase
     {
      
         public override bool RecipeIsValid(SerialPortInst port)

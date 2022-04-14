@@ -67,7 +67,7 @@
     <Compile Include="Recipes\ComportRecipe.cs" />
     <Compile Include="Recipes\InstancePathRecipe.cs" />
     <Compile Include="Recipes\RecipeSerializer.cs" />
-    <Compile Include="Recipes\SerialPortRecipe.cs" />
+    <Compile Include="Recipes\RecipeBase.cs" />
     <Compile Include="Recipes\VidPidRecipe.cs" />
     <Compile Include="ShellInvoker.cs" />
     <Compile Include="Recipes\UniversalRecipe.cs" />

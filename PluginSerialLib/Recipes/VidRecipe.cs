@@ -8,7 +8,7 @@ using Newtonsoft.Json;
 namespace PluginSerialLib.Recipes
 {
     [JsonObject(MemberSerialization.OptIn)]
-    public class VidRecipe : SerialPortRecipe
+    public class VidRecipe : RecipeBase
     {
         [JsonObject]
         public class VidFilter

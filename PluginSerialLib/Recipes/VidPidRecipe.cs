@@ -9,7 +9,7 @@ namespace PluginSerialLib.Recipes
 {
 
     [JsonObject(MemberSerialization.OptIn)]
-    public class VidPidRecipe : SerialPortRecipe
+    public class VidPidRecipe : RecipeBase
     {
         [JsonObject]
         public class VidPidFilter

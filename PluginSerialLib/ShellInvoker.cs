@@ -44,33 +44,34 @@ namespace PluginSerialLib
                 }
             }
 
-
-            StringBuilder sb = new StringBuilder();
-            foreach (var arg in ProcessArguments)
-            {
-                if (arg.Contains(SerialPortRecipe.serialPlaceholderString))
-                {
-                    sb.Append(" " + arg.Replace(SerialPortRecipe.serialPlaceholderString, serialport));
-                }
-                else
-                {
-                    sb.Append(" " + arg);
-                }
-
-
-            }
-
-            string processArguments = sb.ToString();
-
-
-            logger.Debug($"Starting process on path: \n{ProcessPath} \nArguments: {processArguments}");
-
-
             System.Diagnostics.Process process = new System.Diagnostics.Process();
             System.Diagnostics.ProcessStartInfo startInfo = new System.Diagnostics.ProcessStartInfo();
             startInfo.WindowStyle = System.Diagnostics.ProcessWindowStyle.Normal;
             startInfo.FileName = processPathFull;
-            startInfo.Arguments = processArguments;
+
+            string processArguments = "NONE";
+
+            if (ProcessArguments != null)
+            {
+                StringBuilder sb = new StringBuilder();
+                foreach (var arg in ProcessArguments)
+                {
+                    if (arg.Contains(RecipeBase.serialPlaceholderString))
+                    {
+                        sb.Append(" " + arg.Replace(RecipeBase.serialPlaceholderString, serialport));
+                    }
+                    else
+                    {
+                        sb.Append(" " + arg);
+                    }
+                }
+                processArguments = sb.ToString();
+                startInfo.Arguments = processArguments;
+            }
+
+
+            logger.Debug($"Starting process on path: \n{ProcessPath} \nArguments: {processArguments}");
+            
             process.StartInfo = startInfo;
 
             try

@@ -48,13 +48,21 @@ namespace PluginSerialLib
             value = false;
             base.SetVisibleCore(value);
         }
+
+        private const int DBT_DEVICEARRIVAL = 0x8000;
+        private const int DBT_DEVICEREMOVECOMPLETE = 0x8004;
+        private const int DBT_DEVNODES_CHANGED = 0x0007;
         protected override void WndProc(ref Message m)
         {
             // Trap WM_DEVICECHANGE
             if (m.Msg == 0x219)
             {
-                DeviceNotifyDelegate handler = DeviceNotify;
-                if (handler != null) handler(m);
+                int wParam = (int)m.WParam;
+                if (wParam == DBT_DEVICEARRIVAL || wParam == DBT_DEVICEREMOVECOMPLETE || wParam == DBT_DEVNODES_CHANGED)
+                {
+                    DeviceNotifyDelegate handler = DeviceNotify;
+                    if (handler != null) handler(m);
+                }
             }
             base.WndProc(ref m);
         }

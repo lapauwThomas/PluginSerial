@@ -11,7 +11,7 @@ using PluginSerialLib;
 namespace PluginSerialLib.Recipes
 {
     [JsonObject(MemberSerialization.OptIn)]
-    public class ComportRecipe : SerialPortRecipe
+    public class ComportRecipe : RecipeBase
     {
 
 

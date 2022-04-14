@@ -48,7 +48,33 @@ namespace PluginSerialConsoleTester
 
             string exePath = Path.GetDirectoryName(Application.ExecutablePath);
             string recipePath = Path.Combine(exePath, "Recipes");
-            RecipeManager recipeManager = new RecipeManager(recipePath);
+            RecipeManager recipeManager = new RecipeManager();
+            recipeManager.StopAllProcessesOnDispose = true;
+            RecipeFolderMonitor folderMonitor = new RecipeFolderMonitor(recipePath, recipeManager.RecipeCollection);
+            NoticationIconManager notificationIcon =  new NoticationIconManager(recipeManager, SerialPortManager.GetSerialPortManager());
+            notificationIcon.OnExitClicked += () => Environment.Exit(0);
+
+            UniversalRecipe puttyRecipe = new UniversalRecipe
+            {
+                Name = "Open Putty",
+                Description = "This is a test description",
+                RunType = RecipeRuntype.Ask,
+                Icon = SystemIcons.Hand,
+                ProcessPath = @"PuTTY.exe",
+                KillOnDisconnect = false
+            };
+            recipeManager.AddRecipe(puttyRecipe);
+
+            UniversalRecipe CreateRecipe = new UniversalRecipe
+            {
+                Name = "Create new recipe",
+                Description = "This is a test description",
+                RunType = RecipeRuntype.Ask,
+                Icon = SystemIcons.Hand,
+                ProcessPath = @"",
+                KillOnDisconnect = false
+            };
+            recipeManager.AddRecipe(CreateRecipe);
 
 
             ComportRecipe recipe = new ComportRecipe
@@ -69,7 +95,7 @@ namespace PluginSerialConsoleTester
             {
                 Name = "VidPidRecipe",
                 Description = "This is a test description",
-                RunType = RecipeRuntype.AutoRunIfOnly,
+                RunType = RecipeRuntype.AutorunFinal,
                 Icon = SystemIcons.Hand,
                 ProcessPath = @"PuTTY.exe",
                 ProcessArguments = new List<string> { @"-serial {PORT}", @"-sercfg 115200,8,n,1,N" },
@@ -77,6 +103,36 @@ namespace PluginSerialConsoleTester
                 KillOnDisconnect = true
             };
             recipeManager.AddRecipe(vidpidrecipe);
+
+            VidPidRecipe Debugger = new VidPidRecipe
+            {
+                Name = "Debugger",
+                Description = "Digilent debugger",
+                RunType = RecipeRuntype.AutoRunIfOnly,
+                Icon = SystemIcons.Hand,
+                ProcessPath = @"PuTTY.exe",
+                ProcessArguments = new List<string> { @"-serial {PORT}", @"-sercfg 115200,8,n,1,N" },
+                Filter = new VidPidRecipe.VidPidFilter("0403", "6010"),
+                KillOnDisconnect = true
+            };
+            recipeManager.AddRecipe(Debugger);
+
+            InstancePathRecipe CopenHagen = new InstancePathRecipe
+            {
+                Name = "DEBUG Copenhagen",
+                Description = "Digilent debugger",
+                RunType = RecipeRuntype.AutoRunIfOnly,
+                Icon = SystemIcons.Hand,
+                ProcessPath = @"PuTTY.exe",
+                ProcessArguments = new List<string> { @"-serial {PORT}", @"-sercfg 115200,8,n,1,N" },
+                Filter = new InstancePathRecipe.InstancePathFilter(@"FTDIBUS\VID_0403+PID_6010+210357AEA503B\0000"),
+                KillOnDisconnect = true
+            };
+            recipeManager.AddRecipe(CopenHagen);
+
+
+            folderMonitor.WriteRecipeToFile(Debugger,folderMonitor.RecipeFolderPath);
+
 
             //KnownTypesBinder knownTypesBinder = new KnownTypesBinder();
 
@@ -100,32 +156,9 @@ namespace PluginSerialConsoleTester
 
 
 
-            Thread notifyThread = new Thread(
-                delegate ()
-                {
-                    menu = new ContextMenu();
-                    
-                    mnuExit = new MenuItem("Exit");
-                    menu.MenuItems.Add(0, mnuExit);
 
 
-                        notificationIcon = new NotifyIcon()
-                    {
-                        Icon = SystemIcons.Hand,
-                        ContextMenu = menu,
-                        Text = "Main"
-                    };
-                    mnuExit.Click += new EventHandler(mnuExit_Click);
 
-                    notificationIcon.Visible = true;
-                    Application.Run();
-                }
-            );
-
-            notifyThread.Start();
-
-
-            
 
 
             Console.ReadLine();

@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
+using System.Collections.Specialized;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -8,7 +10,7 @@ using PluginSerialLib.Recipes;
 
 namespace PluginSerialLib
 {
-    internal class RecipeCollection: IEnumerable<SerialPortRecipe>
+    public class RecipeCollection: ObservableCollection<IEnumerable<RecipeBase>>, IEnumerable<RecipeBase>
     {
         private List<InstancePathRecipe> instancePathRecipes;
         private List<VidPidRecipe> vidPidRecipes;
@@ -16,11 +18,17 @@ namespace PluginSerialLib
         private List<ComportRecipe> comportRecipes;
         private List<UniversalRecipe> universalRecipes;
 
-        public RecipeCollection(IEnumerable<SerialPortRecipe> recipes): this()
+
+        public bool ReplaceRecipeIfSameName = true;
+        /// <summary>
+        /// Rebuild collection from previous collection
+        /// </summary>
+        /// <param name="recipes">Existing recipeCollection</param>
+        public RecipeCollection(IEnumerable<RecipeBase> recipes): this()
         {
             foreach (var serialPortRecipe in recipes)
             {
-                this.Add(serialPortRecipe);
+                AddRecipe(serialPortRecipe);
             }
         }
 
@@ -31,23 +39,68 @@ namespace PluginSerialLib
             vidRecipes = new List<VidRecipe>();
             comportRecipes = new List<ComportRecipe>();
             universalRecipes = new List<UniversalRecipe>();
+
         }
 
-        public List<SerialPortRecipe> ToList()
+        public void RebuildCollection(IEnumerable<RecipeBase> recipes)
+        {
+            //instancePathRecipes = new List<InstancePathRecipe>();
+            //vidPidRecipes = new List<VidPidRecipe>();
+            //vidRecipes = new List<VidRecipe>();
+            //comportRecipes = new List<ComportRecipe>();
+            //universalRecipes = new List<UniversalRecipe>();
+
+            foreach (var serialPortRecipe in recipes)
+            {
+                AddRecipe(serialPortRecipe);
+            }
+            this.OnCollectionChanged(new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Add, recipes));
+        }
+
+
+        public List<RecipeBase> ToList()
         {
             var recipelists = new List<IEnumerable>(){ instancePathRecipes, vidPidRecipes, vidRecipes, comportRecipes, universalRecipes };
 
-            var output = new List<SerialPortRecipe>();
+            var output = new List<RecipeBase>();
             foreach (var list in recipelists)
             {
-                output.Concat(list.Cast<SerialPortRecipe>());
+                var casted = list.Cast<RecipeBase>();
+                output.AddRange(casted);
             }
 
             return output;
         }
 
-        public void Add(SerialPortRecipe recipe)
+        public void AddRange(IEnumerable<RecipeBase> recipes)
         {
+            foreach (var serialPortRecipe in recipes)
+            {
+                AddRecipe(serialPortRecipe);
+            }
+            this.OnCollectionChanged(new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Add, recipes));
+        }
+
+        public void Add(RecipeBase recipe)
+        {
+            AddRecipe(recipe);
+            this.OnCollectionChanged(new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Add, new List<RecipeBase>() { recipe }));
+        }
+        private void AddRecipe(RecipeBase recipe)
+        {
+            var currentItems = ToList();
+            if (currentItems.Any(si => si.Name.Equals(recipe.Name)))
+            {
+                var existing = currentItems.FirstOrDefault(si => si.Name.Equals(recipe.Name));
+                if (ReplaceRecipeIfSameName)
+                {
+                    RemoveRecipe(existing);
+                }
+                else
+                {
+                    return;
+                }
+            }
             switch (recipe)
             {
                 case InstancePathRecipe instancePathRecipe:
@@ -69,8 +122,25 @@ namespace PluginSerialLib
                     throw new ArgumentException("Recipe not supported");
 
             }
+         
         }
-        public void Remove(SerialPortRecipe recipe)
+
+        public void Remove(RecipeBase recipe)
+        {
+            RemoveRecipe(recipe);
+            this.OnCollectionChanged(new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Remove, new List<RecipeBase>() { recipe }));
+
+        }
+        public void RemoveRange(IEnumerable<RecipeBase> recipes)
+        {
+            foreach (var serialPortRecipe in recipes)
+            {
+                RemoveRecipe(serialPortRecipe);
+            }
+            this.OnCollectionChanged(new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Remove, recipes));
+        }
+
+        private void RemoveRecipe(RecipeBase recipe)
         {
             switch (recipe)
             {
@@ -93,9 +163,10 @@ namespace PluginSerialLib
                     throw new ArgumentException("Recipe not supported");
 
             }
+            this.OnCollectionChanged(new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Remove, new List<RecipeBase>() { recipe }));
         }
 
-        public IEnumerator<SerialPortRecipe> GetEnumerator()
+        public new IEnumerator<RecipeBase> GetEnumerator()
         {
             return this.ToList().GetEnumerator();
         }

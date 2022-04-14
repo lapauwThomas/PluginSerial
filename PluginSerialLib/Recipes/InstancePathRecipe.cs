@@ -9,7 +9,7 @@ using Newtonsoft.Json;
 namespace PluginSerialLib.Recipes
 {
     [JsonObject(MemberSerialization.OptIn)]
-    public class InstancePathRecipe : SerialPortRecipe
+    public class InstancePathRecipe : RecipeBase
     {
 
       

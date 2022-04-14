@@ -14,7 +14,7 @@ namespace PluginSerialLib
     public enum RecipeRuntype{ Ask, AutoRunIfOnly, AutorunFinal, Disabled}
 
     [JsonObject(MemberSerialization.OptIn)]
-    public abstract class SerialPortRecipe
+    public abstract class RecipeBase
     {
 
 
@@ -44,23 +44,25 @@ namespace PluginSerialLib
 
             public readonly Process CurrentProcess;
 
-            private SerialPortRecipe _recipe;
+            private RecipeBase _recipe;
 
-            public SerialPortInst Port;
+            public SerialPortInst Port { get; }
 
-            public RecipeProcessHandle(SerialPortRecipe recipe, SerialPortInst port, Process proc)
+            public RecipeProcessHandle(RecipeBase recipe, SerialPortInst port, Process proc)
             {
                 _recipe = recipe;
                 Port = port;
+                CurrentProcess = proc;
                 if (proc != null)
                 {
+                    proc.EnableRaisingEvents = true;
                     proc.Exited += (sender, args) => _recipe.RecipeFinished(); ;
                 }
             }
 
             public void EndProcess()
             {
-                if (CurrentProcess != null && CurrentProcess.HasExited)
+                if (CurrentProcess != null && !CurrentProcess.HasExited)
                 {
                     //kill the process, should trigger "Exited" eventhandler
                     CurrentProcess.Kill();
@@ -84,7 +86,7 @@ namespace PluginSerialLib
             } 
         }
 
-        [JsonProperty]
+        //[JsonProperty]
         public string Name;
 
         [JsonProperty]
@@ -128,9 +130,26 @@ namespace PluginSerialLib
             ProcessHandle?.EndProcess();
         }
 
+        /// <summary>
+        /// Force the recipe to finish. Will kill the process if its running
+        /// </summary>
+        public void KillSilently()
+        {
+            try
+            {
+                ProcessHandle.CurrentProcess.EnableRaisingEvents = false;
+                ProcessHandle?.CurrentProcess.Kill();
+            }
+            catch (Exception ex)
+            {
+
+            }
+        }
+
         private void RecipeFinished()
         {
-            OnRecipeFinished?.Invoke(this, new RecipeInvokedEventArgs(this, ProcessHandle.Port));
+            var port = ProcessHandle.Port;
+            OnRecipeFinished?.Invoke(this, new RecipeInvokedEventArgs(this, port));
             ProcessHandle = null;
         }
 
@@ -148,7 +167,7 @@ namespace PluginSerialLib
         /// </summary>
         /// <param name="port"></param>
         /// <returns></returns>
-        public bool TryInvokeRecipe(SerialPortInst port, out RecipeProcessHandle handle)
+        public bool TryInvokeRecipe(SerialPortInst port)
         {
             if (!RecipeIsValid(port)) return false;
 
@@ -157,12 +176,10 @@ namespace PluginSerialLib
                 var process = InvokeProcess(port.Port);
                 ProcessHandle = new RecipeProcessHandle(this, port, process);
                 OnRecipeInvoked?.Invoke(this, new RecipeInvokedEventArgs(this, port));
-                handle = ProcessHandle;
                 return true;
             }
             catch (Exception ex)
             {
-                handle == null;
                 return false;
             }
         }
@@ -195,11 +212,11 @@ namespace PluginSerialLib
     {
         public SerialPortInst Port { get; private set; }
 
-        public SerialPortRecipe Recipe { get; private set; }
+        public RecipeBase Recipe { get; private set; }
 
         public Type RecipeTipe { get; private set; }
 
-        public RecipeInvokedEventArgs(SerialPortRecipe recipe, SerialPortInst port){
+        public RecipeInvokedEventArgs(RecipeBase recipe, SerialPortInst port){
             this.Recipe = recipe;
             this.Port = port;
             this.RecipeTipe = recipe.GetType();

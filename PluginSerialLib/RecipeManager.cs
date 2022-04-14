@@ -11,60 +11,30 @@ using PluginSerialLib.Recipes;
 
 namespace PluginSerialLib
 {
-    public class RecipeManager
+    public class RecipeManager:IDisposable
     {
-        private Dictionary<string, SerialPortRecipe> runningRecipes = new Dictionary<string, SerialPortRecipe>();
+        public bool StopAllProcessesOnDispose;
+
+        private Dictionary<string, RecipeBase> runningRecipes = new Dictionary<string, RecipeBase>();
 
         private static Logger logger = LogManager.GetCurrentClassLogger();
-        private RecipeCollection recipeCollection;
+        public RecipeCollection RecipeCollection { get; private set; }
 
         public EventHandler<QueryRecipeEventArgs> OnQueryRecipeExecution;
-        public EventHandler<RecipeExecutedEventArgs> OnRecipeExecuted;
 
-        public readonly string RecipeFolderPath;
-
-        FileSystemWatcher folderWatcher;
-        private bool AutoReloadRecipesOnChange { get; set; } = true;
-
-        public RecipeManager(string recipeFolderPath)
+        public RecipeManager()
         {
             SerialPortManager mgr = SerialPortManager.GetSerialPortManager();
             mgr.OnPortAdded += HandleNewPort;
             mgr.OnPortRemoved += HandleRemovedPort;
-            recipeCollection =  new RecipeCollection();
-
-            RecipeFolderPath = recipeFolderPath;
-            if (!Directory.Exists(RecipeFolderPath))
-            {
-                Directory.CreateDirectory(RecipeFolderPath);
-            }
-
-            folderWatcher = new FileSystemWatcher(RecipeFolderPath);
-
-            folderWatcher.NotifyFilter = NotifyFilters.Attributes
-                                 | NotifyFilters.CreationTime
-                                 | NotifyFilters.FileName
-                                 | NotifyFilters.LastAccess
-                                 | NotifyFilters.LastWrite;
-
-
-            folderWatcher.Changed += OnRecipesChanged;
-            //folderWatcher.Created += OnRecipesChanged;
-            //folderWatcher.Deleted += OnRecipesChanged;
-            //folderWatcher.Renamed += OnRecipesChanged;
-
-
-            folderWatcher.Filter = "*.json";
-            folderWatcher.EnableRaisingEvents = true;
-
-
+            RecipeCollection =  new RecipeCollection();
         }
 
 
-        public List<SerialPortRecipe> GetAvailableRecipesForPort(SerialPortInst port)
+        public List<RecipeBase> GetAvailableRecipesForPort(SerialPortInst port)
         {
-            List<SerialPortRecipe> recipelList = new List<SerialPortRecipe>();
-            foreach (var recipe in recipeCollection)
+            List<RecipeBase> recipelList = new List<RecipeBase>();
+            foreach (var recipe in RecipeCollection)
             {
                 if (recipe.RecipeIsValid(port))
                 {
@@ -76,69 +46,39 @@ namespace PluginSerialLib
         }
 
 
-        public RecipeManager(IEnumerable<SerialPortRecipe> recipes) : this(new List<SerialPortRecipe>())
-        {
+        public RecipeManager(IEnumerable<RecipeBase> recipes) : this(new List<RecipeBase>())
+        { }
 
-
-        }
-
-        public RecipeManager(List<SerialPortRecipe> recipes)
+        public RecipeManager(List<RecipeBase> recipes)
         {
             SerialPortManager mgr = SerialPortManager.GetSerialPortManager();
             mgr.OnPortAdded += HandleNewPort;
             mgr.OnPortRemoved += HandleRemovedPort;
-            recipeCollection = new RecipeCollection(recipes.ToList());
+            RecipeCollection = new RecipeCollection(recipes.ToList());
         }
 
 
-        public void AddRecipe(SerialPortRecipe recipe)
+        public void AddRecipe(RecipeBase recipe)
         {
-            recipeCollection.Add(recipe);
+            RecipeCollection.Add(recipe);
         }
 
         private void HandleRemovedPort(object sender, SerialPortManager.PortChangedEventArgs args)
         {
             SerialPortInst removedPort = args.Port;
+
             if (runningRecipes.ContainsKey(removedPort.Port))
             {
                 runningRecipes[removedPort.Port].PortDisconnected();
             }
         }
 
-        private void OnRecipesChanged(object sender, FileSystemEventArgs e)
-        {
-            if (!AutoReloadRecipesOnChange) return;
-
-
-                LoadFromFolder(RecipeFolderPath);
-            
-
-        }
-
-        private void LoadFromFolder(string path)
-        {
-            string[] allfiles = Directory.GetFiles(path, "*.json", SearchOption.TopDirectoryOnly);
-            RecipeSerializer ser = new RecipeSerializer();
-            foreach (string file in allfiles)
-            {
-                try
-                {
-                    recipeCollection.Add(ser.RecipeFromFile(file));
-                    logger.Trace($"Added recipe from file [{file}");
-                }
-                catch (Exception ex)
-                {
-                    logger.Error(ex,$"Could not load recipe from file [{file}");
-                }
-            }
-
-        }
 
         private void HandleNewPort(object sender, SerialPortManager.PortChangedEventArgs args)
         {
             SerialPortInst addedPort = args.Port;
-            List<SerialPortRecipe> availableRecipes = new List<SerialPortRecipe>();
-            foreach (SerialPortRecipe serialPortRecipe in recipeCollection)
+            List<RecipeBase> availableRecipes = new List<RecipeBase>();
+            foreach (RecipeBase serialPortRecipe in RecipeCollection)
             {
                 if (serialPortRecipe.RecipeIsValid(addedPort))
                 {
@@ -159,7 +99,7 @@ namespace PluginSerialLib
 
             if (availableRecipes.Count == 1)
             {
-                SerialPortRecipe recipe = availableRecipes.First();
+                RecipeBase recipe = availableRecipes.First();
                 if (recipe.RunType == RecipeRuntype.AutoRunIfOnly)
                 {
                     ExecuteRecipe(recipe, addedPort);
@@ -171,9 +111,18 @@ namespace PluginSerialLib
             }
         }
 
-        public bool ExecuteRecipe(SerialPortRecipe recipe, SerialPortInst port)
+        public bool ExecuteRecipe(RecipeBase recipe, SerialPortInst port)
         {
-            recipe.OnRecipeFinished += (sender, args) => runningRecipes.Remove(port.Port); //allow for removal on finished
+            if (runningRecipes.ContainsKey(port.Port))
+            {
+                logger.Warn($"There is alread a running recipe for port {port.Port}");
+                return false;
+            }
+
+            recipe.OnRecipeFinished += (sender, args) =>
+            {
+                runningRecipes.Remove(port.Port);
+            }; //allow for removal on finished
             bool runstatus = recipe.TryInvokeRecipe(port);
             logger.Info($"Started Recipe \"{recipe.Name}\" for port {port.Port}");
 
@@ -182,14 +131,35 @@ namespace PluginSerialLib
             return runstatus;
         }
 
+        /// <summary>
+        /// Kill the running recipe for a port if any
+        /// </summary>
+        /// <param name="port"></param>
+        public void KillRecipe(SerialPortInst port)
+        {
+            GetRunningRecipe(port)?.FinishRecipe();
+        }
+        /// <summary>
+        /// Gets the running recipe for a port. Returns null if no recipe running
+        /// </summary>
+        /// <param name="port"></param>
+        /// <returns></returns>
+        public RecipeBase GetRunningRecipe(SerialPortInst port)
+        {
+            if (runningRecipes.ContainsKey(port.Port))
+            {
+                return runningRecipes[port.Port];
+            }
 
+            return null;
+        }
 
         public class QueryRecipeEventArgs : EventArgs
         {
-            public readonly List<SerialPortRecipe> availableRecipes;
+            public readonly List<RecipeBase> availableRecipes;
             public readonly SerialPortInst portinst;
 
-            public QueryRecipeEventArgs(List<SerialPortRecipe> availableRecipes, SerialPortInst port)
+            public QueryRecipeEventArgs(List<RecipeBase> availableRecipes, SerialPortInst port)
             {
                 this.availableRecipes = availableRecipes;
                 portinst = port;
@@ -198,14 +168,44 @@ namespace PluginSerialLib
 
         public class RecipeExecutedEventArgs : EventArgs
         {
-            public readonly SerialPortRecipe Recipe;
+            public readonly RecipeBase Recipe;
             public readonly SerialPortInst Port;
 
-            public RecipeExecutedEventArgs(SerialPortRecipe recipe, SerialPortInst port)
+            public RecipeExecutedEventArgs(RecipeBase recipe, SerialPortInst port)
             {
                 Recipe = recipe;
                 Port = port;
             }
         }
+
+        private bool disposed;
+        public void Dispose()
+        {
+            Dispose(true);
+            GC.SuppressFinalize(this);
+        }
+
+        public void Dispose(bool disposing)
+        {
+            if (!disposed)
+            {
+                if (StopAllProcessesOnDispose)
+                {
+                    var procs = runningRecipes.Values.ToList();
+                    foreach (var runningRecipe in procs)
+                    {
+                        runningRecipe.FinishRecipe();
+                    }
+                }
+                disposed = true;
+            }
+        }
+
+        ~RecipeManager()
+        {
+            Dispose(false);
+        }
+
+      
     }
 }

@@ -25,6 +25,8 @@ namespace PluginSerialLib
         public EventHandler<PortChangedEventArgs> OnPortAdded;
         public EventHandler<PortChangedEventArgs> OnPortRemoved;
 
+        public List<SerialPortInst> AvailablePorts => currentPorts.Values.ToList();
+
 
         private SerialPortManager()
         {
@@ -65,11 +67,7 @@ namespace PluginSerialLib
             var removedPorts = currentPorts.Except(newPorts, new KeyComparer<string,SerialPortInst>());
             var addedPorts = newPorts.Except(currentPorts, new KeyComparer<string, SerialPortInst>());
 
-            logger.Trace($"current ports:"); 
-            foreach (var port in currentPorts)
-            {
-                logger.Trace($"\t port {port.Value.Port}");
-            }
+
 
             logger.Trace($"Removing ports:");
             foreach (var removedPort in removedPorts)
@@ -86,6 +84,7 @@ namespace PluginSerialLib
 
             foreach (var removedPort in removedPorts)
             {
+                removedPort.Value.PortDisconnected();
                 OnPortRemoved.Invoke(this, new PortChangedEventArgs(removedPort.Value));
 
             }
@@ -96,6 +95,12 @@ namespace PluginSerialLib
             }
 
             currentPorts = newPorts;
+
+            logger.Trace($"current ports:");
+            foreach (var port in currentPorts)
+            {
+                logger.Trace($"\t port {port.Value.Port}");
+            }
 
             mutex.ReleaseMutex();
 

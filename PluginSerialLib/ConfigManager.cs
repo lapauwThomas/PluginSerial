@@ -9,6 +9,8 @@ namespace PluginSerialLib
 {
     public static class ConfigManager
     {
+        public const string DefaultRecipeExtension = ".json";
+
         /// <summary>
         /// Collection with regex patterns for VID_PID_combos
         /// </summary>
