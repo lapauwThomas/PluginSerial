@@ -101,8 +101,7 @@ namespace PluginSerialLib
             SerialPortInst removedPort = args.Port;
             if (runningRecipes.ContainsKey(removedPort.Port))
             {
-                runningRecipes[removedPort.Port].KillProcess();
-                runningRecipes.Remove(removedPort.Port);
+                runningRecipes[removedPort.Port].PortDisconnected();
             }
         }
 
@@ -174,14 +173,11 @@ namespace PluginSerialLib
 
         public bool ExecuteRecipe(SerialPortRecipe recipe, SerialPortInst port)
         {
+            recipe.OnRecipeFinished += (sender, args) => runningRecipes.Remove(port.Port); //allow for removal on finished
             bool runstatus = recipe.TryInvokeRecipe(port);
             logger.Info($"Started Recipe \"{recipe.Name}\" for port {port.Port}");
 
-            //keep track of running recipes that might need killing.
-            if (recipe.KillOnDisconnect)
-            {
-                runningRecipes.Add(port.Port, recipe);
-            }
+            runningRecipes.Add(port.Port, recipe);
 
             return runstatus;
         }

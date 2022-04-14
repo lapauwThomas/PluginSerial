@@ -22,6 +22,60 @@ namespace PluginSerialLib
 
         public string RecipePath = null;
 
+        public EventHandler<RecipeInvokedEventArgs> OnRecipeInvoked;
+        public EventHandler<RecipeInvokedEventArgs> OnRecipeFinished;
+
+        private bool _isInvoked = false;
+
+        public class RecipeProcessHandle
+        {
+
+            public bool IsRunning
+            {
+                get
+                {
+                    if (CurrentProcess == null) //if there is no process, it is always running
+                    {
+                        return true;
+                    }
+                    return !CurrentProcess.HasExited;
+                }
+            }
+
+            public readonly Process CurrentProcess;
+
+            private SerialPortRecipe _recipe;
+
+            public SerialPortInst Port;
+
+            public RecipeProcessHandle(SerialPortRecipe recipe, SerialPortInst port, Process proc)
+            {
+                _recipe = recipe;
+                Port = port;
+                if (proc != null)
+                {
+                    proc.Exited += (sender, args) => _recipe.RecipeFinished(); ;
+                }
+            }
+
+            public void EndProcess()
+            {
+                if (CurrentProcess != null && CurrentProcess.HasExited)
+                {
+                    //kill the process, should trigger "Exited" eventhandler
+                    CurrentProcess.Kill();
+                    CurrentProcess.WaitForExit();
+                    CurrentProcess.Dispose();
+                }
+                else
+                {   //if there was no process, trigger the cleanup
+                    _recipe.RecipeFinished();
+                }
+            }
+        }
+        public RecipeProcessHandle ProcessHandle { get; private set; }
+
+
         [JsonProperty]
         public string RecipeType { 
             get
@@ -57,71 +111,98 @@ namespace PluginSerialLib
         [JsonProperty]
         protected string ICON_BASE64
         {
-            get
-            {
-                return IconBase64Converter.IconToString(Icon);
-            }
-            set
-            {
-                Icon = IconBase64Converter.StringToIcon(value);
-            }
+            get => IconBase64Converter.IconToString(Icon);
+            set => Icon = IconBase64Converter.StringToIcon(value);
         }
 
-        private Process proc = null;
 
 
-        public bool ProcessRunning
+        public bool ProcessRunning => ProcessHandle?.IsRunning ?? false; //if the process handle is not null, it evaluates to running. If null there is no process.
+
+
+        /// <summary>
+        /// Force the recipe to finish. Will kill the process if its running
+        /// </summary>
+        public void FinishRecipe()
         {
-            get
-            {
-                return !(proc?.HasExited ?? true);
-            }
+            ProcessHandle?.EndProcess();
         }
 
-        public void KillProcess()
+        private void RecipeFinished()
         {
-            if (proc != null && !proc.HasExited)
-            {
-                proc.Kill();
-                proc.WaitForExit();
-                proc.Dispose();
-            }
-
+            OnRecipeFinished?.Invoke(this, new RecipeInvokedEventArgs(this, ProcessHandle.Port));
+            ProcessHandle = null;
         }
 
 
+        /// <summary>
+        /// Method to be implemented in child classes. Checks if the provided port is valid for the supplied filter
+        /// </summary>
+        /// <param name="port"></param>
+        /// <returns></returns>
         public abstract bool RecipeIsValid(SerialPortInst port);
 
 
-
-        public bool TryInvokeRecipe(SerialPortInst port)
+        /// <summary>
+        /// Safely try to invoke the recipe
+        /// </summary>
+        /// <param name="port"></param>
+        /// <returns></returns>
+        public bool TryInvokeRecipe(SerialPortInst port, out RecipeProcessHandle handle)
         {
             if (!RecipeIsValid(port)) return false;
 
             try
             {
-                Invoke(port.Port);
+                var process = InvokeProcess(port.Port);
+                ProcessHandle = new RecipeProcessHandle(this, port, process);
+                OnRecipeInvoked?.Invoke(this, new RecipeInvokedEventArgs(this, port));
+                handle = ProcessHandle;
                 return true;
             }
             catch (Exception ex)
             {
+                handle == null;
                 return false;
             }
         }
 
-        public void Invoke(string currentPort)
+        private Process InvokeProcess(string currentPort)
         {
-            proc = ShellInvoker.CreateAndInvokeProcess(ProcessPath, ProcessArguments, currentPort);
+            if (!string.IsNullOrEmpty(ProcessPath))
+            {
+                return ShellInvoker.CreateAndInvokeProcess(ProcessPath, ProcessArguments, currentPort);
+            }
+
+            return null;
+
         }
 
-        //public abstract void OnDisconnect();
-        public void InvokeDisconnect()
+        /// <summary>
+        /// To be called by the recipemanager when a port is disconnected
+        /// </summary>
+        public void PortDisconnected()
         {
             if (KillOnDisconnect)
             {
-                KillProcess();
+                FinishRecipe();
             }
         }
 
+    }
+
+    public class RecipeInvokedEventArgs : EventArgs
+    {
+        public SerialPortInst Port { get; private set; }
+
+        public SerialPortRecipe Recipe { get; private set; }
+
+        public Type RecipeTipe { get; private set; }
+
+        public RecipeInvokedEventArgs(SerialPortRecipe recipe, SerialPortInst port){
+            this.Recipe = recipe;
+            this.Port = port;
+            this.RecipeTipe = recipe.GetType();
+        }
     }
 }
