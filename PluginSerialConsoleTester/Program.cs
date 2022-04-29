@@ -15,6 +15,7 @@ using System.IO;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Serialization;
 using System.Reflection;
+using Microsoft.Toolkit.Uwp.Notifications;
 
 namespace PluginSerialConsoleTester
 {
@@ -33,6 +34,15 @@ namespace PluginSerialConsoleTester
 
             logger.Info("Starting PluginSerial");
 
+
+
+            // Requires Microsoft.Toolkit.Uwp.Notifications NuGet package version 7.0 or greater
+            new ToastContentBuilder()
+                .AddArgument("action", "viewConversation")
+                .AddArgument("conversationId", 9813)
+                .AddText("Andrew sent you a picture")
+                .AddText("Check this out, The Enchantments in Washington!")
+                .Show(); // Not seeing the Show() method? Make sure you have version 7.0, and if you're using .NET 5, your TFM must be net5.0-windows10.0.17763.0 or greater
 
             var portnames = System.IO.Ports.SerialPort.GetPortNames(); 
             
@@ -61,7 +71,7 @@ namespace PluginSerialConsoleTester
                 RunType = RecipeRuntype.Ask,
                 Icon = SystemIcons.Hand,
                 ProcessPath = @"PuTTY.exe",
-                KillOnDisconnect = false
+                ProcessPolicy = ProcessKillPolicy.KillOnRemoval
             };
             recipeManager.AddRecipe(puttyRecipe);
 
@@ -72,7 +82,7 @@ namespace PluginSerialConsoleTester
                 RunType = RecipeRuntype.Ask,
                 Icon = SystemIcons.Hand,
                 ProcessPath = @"",
-                KillOnDisconnect = false
+                ProcessPolicy = ProcessKillPolicy.FireAndForget
             };
             recipeManager.AddRecipe(CreateRecipe);
 
@@ -86,7 +96,7 @@ namespace PluginSerialConsoleTester
                 ProcessPath = @"PuTTY.exe",
                 ProcessArguments = new List<string>{@"-serial {PORT}", @"-sercfg 57600,8,n,1,N"},
                 Filter =new ComportRecipe.ComportFilter("COM6"),
-                KillOnDisconnect = true
+                ProcessPolicy = ProcessKillPolicy.FireAndForget
             };
             recipeManager.AddRecipe(recipe);
 
@@ -100,7 +110,7 @@ namespace PluginSerialConsoleTester
                 ProcessPath = @"PuTTY.exe",
                 ProcessArguments = new List<string> { @"-serial {PORT}", @"-sercfg 115200,8,n,1,N" },
                 Filter = new VidPidRecipe.VidPidFilter("0403", "6001"),
-                KillOnDisconnect = true
+                ProcessPolicy = ProcessKillPolicy.KillOnRemoval
             };
             recipeManager.AddRecipe(vidpidrecipe);
 
@@ -113,7 +123,7 @@ namespace PluginSerialConsoleTester
                 ProcessPath = @"PuTTY.exe",
                 ProcessArguments = new List<string> { @"-serial {PORT}", @"-sercfg 115200,8,n,1,N" },
                 Filter = new VidPidRecipe.VidPidFilter("0403", "6010"),
-                KillOnDisconnect = true
+                ProcessPolicy = ProcessKillPolicy.Keep
             };
             recipeManager.AddRecipe(Debugger);
 
@@ -126,7 +136,7 @@ namespace PluginSerialConsoleTester
                 ProcessPath = @"PuTTY.exe",
                 ProcessArguments = new List<string> { @"-serial {PORT}", @"-sercfg 115200,8,n,1,N" },
                 Filter = new InstancePathRecipe.InstancePathFilter(@"FTDIBUS\VID_0403+PID_6010+210357AEA503B\0000"),
-                KillOnDisconnect = true
+                ProcessPolicy = ProcessKillPolicy.FireAndForget
             };
             recipeManager.AddRecipe(CopenHagen);
 
@@ -134,37 +144,8 @@ namespace PluginSerialConsoleTester
             folderMonitor.WriteRecipeToFile(Debugger,folderMonitor.RecipeFolderPath);
 
 
-            //KnownTypesBinder knownTypesBinder = new KnownTypesBinder();
-
-            //foreach (Type type in Assembly.GetAssembly(typeof(SerialPortRecipe)).GetTypes()
-            //.Where(myType => myType.IsClass && !myType.IsAbstract && myType.IsSubclassOf(typeof(SerialPortRecipe))))
-            //{
-            //    knownTypesBinder.AddType(type);
-            //}
-            ////knownTypesBinder.AddType(typeof(SerialPortRecipe.ProcessArguments).GetType(), "ProcessArgumentList");
-
-            //RecipeSerializer recipeSerializer = new RecipeSerializer();
-
-
-            //string filename = Path.ChangeExtension(recipe.Name, ".json");
-            //string outputFile = Path.Combine(recipePath, filename);
-            //recipeSerializer.RecipeToFile(recipe, outputFile);
-
-            //SerialPortRecipe recipeDeserial = recipeSerializer.RecipeFromFile(outputFile);
-
-            //recipeManager.AddRecipe(recipeDeserial);
-
-
-
-
-
-
-
-
             Console.ReadLine();
-
-
-
+            ToastNotificationManagerCompat.Uninstall();
 
         }
 

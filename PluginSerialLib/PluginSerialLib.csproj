@@ -66,6 +66,7 @@
     <Compile Include="RecipeManager.cs" />
     <Compile Include="Recipes\ComportRecipe.cs" />
     <Compile Include="Recipes\InstancePathRecipe.cs" />
+    <Compile Include="Recipes\RecipeRunHandleBase.cs" />
     <Compile Include="Recipes\RecipeSerializer.cs" />
     <Compile Include="Recipes\RecipeBase.cs" />
     <Compile Include="Recipes\VidPidRecipe.cs" />
@@ -78,6 +79,9 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="Object lifecycle Notes.txt" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>

@@ -1,0 +1,12 @@
+﻿
+
+On connect, serial port object gets created by serial port searcher. Gets added to serial port manager.
+
+Recipe gets created gets added to Recipe manager.
+
+Recipe gets invoked, creates Runhandle, runhandle gets registered with manager if it needs to be disconnected.
+
+On disconnect/recipe kill, runhandle gets ended, invokes end of recipe, end of recipe unregisters itself with manager
+
+
+

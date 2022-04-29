@@ -49,11 +49,14 @@ namespace PluginSerialLib
             return new string(input.Where(c => char.IsDigit(c)).ToArray());
         }
 
+        public Action OnDisconnect;
+
         /// <summary>
         /// To be called to mark the port as disconnected
         /// </summary>
         public void PortDisconnected()
         {
+            OnDisconnect?.Invoke();
             IsDisconnected = true;
         }
     }

@@ -57,11 +57,8 @@ namespace PluginSerialLib
                 }
 
             }
-            catch (ManagementException e)
-            {
-
-                //     MessageBox.Show("An error occurred while querying for WMI data: " + e.Message);
-            }
+            catch (ManagementException)
+            { }
 
             return FoundPorts;
 

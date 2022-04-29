@@ -124,7 +124,7 @@ namespace PluginSerialConsoleTester
             var runningRecipe = recipeManager.GetRunningRecipe(port) ;
             if (runningRecipe != null)
             {
-                var killRecipe = new MenuItem($"Kill running recipe: \n{runningRecipe.Name}");
+                var killRecipe = new MenuItem($"Kill running recipe: \n{runningRecipe.Recipe.Name}");
                 killRecipe.Click += (s, e) => { recipeManager.KillRecipe(port); };
                 menu.MenuItems.Add(killRecipe);
             }

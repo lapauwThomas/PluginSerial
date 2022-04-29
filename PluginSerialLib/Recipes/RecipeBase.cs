@@ -12,9 +12,10 @@ namespace PluginSerialLib
 {
 
     public enum RecipeRuntype{ Ask, AutoRunIfOnly, AutorunFinal, Disabled}
+    public enum ProcessKillPolicy { Keep, FireAndForget, KillOnRemoval, Disabled }
 
     [JsonObject(MemberSerialization.OptIn)]
-    public abstract class RecipeBase
+    public abstract partial class RecipeBase
     {
 
 
@@ -25,57 +26,8 @@ namespace PluginSerialLib
         public EventHandler<RecipeInvokedEventArgs> OnRecipeInvoked;
         public EventHandler<RecipeInvokedEventArgs> OnRecipeFinished;
 
-        private bool _isInvoked = false;
 
-        public class RecipeProcessHandle
-        {
-
-            public bool IsRunning
-            {
-                get
-                {
-                    if (CurrentProcess == null) //if there is no process, it is always running
-                    {
-                        return true;
-                    }
-                    return !CurrentProcess.HasExited;
-                }
-            }
-
-            public readonly Process CurrentProcess;
-
-            private RecipeBase _recipe;
-
-            public SerialPortInst Port { get; }
-
-            public RecipeProcessHandle(RecipeBase recipe, SerialPortInst port, Process proc)
-            {
-                _recipe = recipe;
-                Port = port;
-                CurrentProcess = proc;
-                if (proc != null)
-                {
-                    proc.EnableRaisingEvents = true;
-                    proc.Exited += (sender, args) => _recipe.RecipeFinished(); ;
-                }
-            }
-
-            public void EndProcess()
-            {
-                if (CurrentProcess != null && !CurrentProcess.HasExited)
-                {
-                    //kill the process, should trigger "Exited" eventhandler
-                    CurrentProcess.Kill();
-                    CurrentProcess.WaitForExit();
-                    CurrentProcess.Dispose();
-                }
-                else
-                {   //if there was no process, trigger the cleanup
-                    _recipe.RecipeFinished();
-                }
-            }
-        }
-        public RecipeProcessHandle ProcessHandle { get; private set; }
+        public RecipeRunHandleBase RunHandle { get; private set; }
 
 
         [JsonProperty]
@@ -100,7 +52,7 @@ namespace PluginSerialLib
        
 
         [JsonProperty]
-        public bool KillOnDisconnect;
+        public ProcessKillPolicy ProcessPolicy;
 
         [JsonProperty]
         public string ProcessPath { get;  set; }
@@ -118,41 +70,15 @@ namespace PluginSerialLib
         }
 
 
-
-        public bool ProcessRunning => ProcessHandle?.IsRunning ?? false; //if the process handle is not null, it evaluates to running. If null there is no process.
-
-
-        /// <summary>
-        /// Force the recipe to finish. Will kill the process if its running
-        /// </summary>
-        public void FinishRecipe()
+        public void RecipeEnded()
         {
-            ProcessHandle?.EndProcess();
-        }
-
-        /// <summary>
-        /// Force the recipe to finish. Will kill the process if its running
-        /// </summary>
-        public void KillSilently()
-        {
-            try
+            if (RunHandle != null)
             {
-                ProcessHandle.CurrentProcess.EnableRaisingEvents = false;
-                ProcessHandle?.CurrentProcess.Kill();
+                OnRecipeFinished?.Invoke(this, new RecipeInvokedEventArgs(this, RunHandle.Port));
+                RunHandle = null;
             }
-            catch (Exception ex)
-            {
 
-            }
         }
-
-        private void RecipeFinished()
-        {
-            var port = ProcessHandle.Port;
-            OnRecipeFinished?.Invoke(this, new RecipeInvokedEventArgs(this, port));
-            ProcessHandle = null;
-        }
-
 
         /// <summary>
         /// Method to be implemented in child classes. Checks if the provided port is valid for the supplied filter
@@ -167,14 +93,24 @@ namespace PluginSerialLib
         /// </summary>
         /// <param name="port"></param>
         /// <returns></returns>
-        public bool TryInvokeRecipe(SerialPortInst port)
+        public bool TryInvokeRecipe(SerialPortInst port, out RecipeRunHandleBase handle)
         {
+            handle = null;
             if (!RecipeIsValid(port)) return false;
 
             try
             {
                 var process = InvokeProcess(port.Port);
-                ProcessHandle = new RecipeProcessHandle(this, port, process);
+                if (ProcessPolicy != ProcessKillPolicy.FireAndForget)
+                {
+                    RunHandle = RecipeRunHandleBase.CreateRecipeRunHandle(this, port, process);
+                    handle = RunHandle;
+
+                }
+                else
+                {
+                     //in this case, we have a succesful invoke, but no handle since it is fire and forget 
+                }
                 OnRecipeInvoked?.Invoke(this, new RecipeInvokedEventArgs(this, port));
                 return true;
             }
@@ -190,9 +126,7 @@ namespace PluginSerialLib
             {
                 return ShellInvoker.CreateAndInvokeProcess(ProcessPath, ProcessArguments, currentPort);
             }
-
             return null;
-
         }
 
         /// <summary>
@@ -200,9 +134,9 @@ namespace PluginSerialLib
         /// </summary>
         public void PortDisconnected()
         {
-            if (KillOnDisconnect)
+            if (ProcessPolicy.Equals(ProcessKillPolicy.KillOnRemoval))
             {
-                FinishRecipe();
+                RunHandle?.EndRecipe();
             }
         }
 
@@ -214,12 +148,12 @@ namespace PluginSerialLib
 
         public RecipeBase Recipe { get; private set; }
 
-        public Type RecipeTipe { get; private set; }
+        public Type RecipeType { get; private set; }
 
         public RecipeInvokedEventArgs(RecipeBase recipe, SerialPortInst port){
             this.Recipe = recipe;
             this.Port = port;
-            this.RecipeTipe = recipe.GetType();
+            this.RecipeType = recipe.GetType();
         }
     }
 }

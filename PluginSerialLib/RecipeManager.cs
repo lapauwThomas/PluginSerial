@@ -15,7 +15,7 @@ namespace PluginSerialLib
     {
         public bool StopAllProcessesOnDispose;
 
-        private Dictionary<string, RecipeBase> runningRecipes = new Dictionary<string, RecipeBase>();
+        private Dictionary<string, RecipeRunHandleBase> runningRecipes = new Dictionary<string, RecipeRunHandleBase>();
 
         private static Logger logger = LogManager.GetCurrentClassLogger();
         public RecipeCollection RecipeCollection { get; private set; }
@@ -69,7 +69,7 @@ namespace PluginSerialLib
 
             if (runningRecipes.ContainsKey(removedPort.Port))
             {
-                runningRecipes[removedPort.Port].PortDisconnected();
+                runningRecipes[removedPort.Port].EndRecipe();
             }
         }
 
@@ -119,14 +119,21 @@ namespace PluginSerialLib
                 return false;
             }
 
-            recipe.OnRecipeFinished += (sender, args) =>
-            {
-                runningRecipes.Remove(port.Port);
-            }; //allow for removal on finished
-            bool runstatus = recipe.TryInvokeRecipe(port);
-            logger.Info($"Started Recipe \"{recipe.Name}\" for port {port.Port}");
 
-            runningRecipes.Add(port.Port, recipe);
+            bool runstatus = recipe.TryInvokeRecipe(port, out var runHandle);
+            if (runstatus)
+            {
+                logger.Info($"Started Recipe \"{recipe.Name}\" for port {port.Port}");
+                if (runHandle != null) //if we get a handle, add it to running recipes
+                {
+                    runningRecipes.Add(port.Port, runHandle);
+
+                    recipe.OnRecipeFinished += (sender, args) =>
+                    {
+                        runningRecipes.Remove(port.Port);
+                    };
+                }
+            }
 
             return runstatus;
         }
@@ -137,14 +144,14 @@ namespace PluginSerialLib
         /// <param name="port"></param>
         public void KillRecipe(SerialPortInst port)
         {
-            GetRunningRecipe(port)?.FinishRecipe();
+            GetRunningRecipe(port)?.EndRecipe();
         }
         /// <summary>
         /// Gets the running recipe for a port. Returns null if no recipe running
         /// </summary>
         /// <param name="port"></param>
         /// <returns></returns>
-        public RecipeBase GetRunningRecipe(SerialPortInst port)
+        public RecipeRunHandleBase GetRunningRecipe(SerialPortInst port)
         {
             if (runningRecipes.ContainsKey(port.Port))
             {
@@ -194,7 +201,7 @@ namespace PluginSerialLib
                     var procs = runningRecipes.Values.ToList();
                     foreach (var runningRecipe in procs)
                     {
-                        runningRecipe.FinishRecipe();
+                        runningRecipe.EndRecipe();
                     }
                 }
                 disposed = true;

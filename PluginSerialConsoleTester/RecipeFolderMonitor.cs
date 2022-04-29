@@ -41,10 +41,10 @@ namespace PluginSerialConsoleTester
                                          | NotifyFilters.LastWrite;
 
 
-            folderWatcher.Changed += OnRecipesFolderChanged;
-            //folderWatcher.Created += OnRecipesFolderChanged;
-            //folderWatcher.Deleted += OnRecipesFolderChanged;
-            //folderWatcher.Renamed += OnRecipesFolderChanged;
+           // folderWatcher.Changed += OnRecipesFolderChanged;
+            folderWatcher.Created += OnRecipesFolderChanged;
+            folderWatcher.Deleted += OnRecipesFolderChanged;
+            folderWatcher.Renamed += OnRecipesFolderChanged;
 
 
             folderWatcher.Filter = $"*{ConfigManager.DefaultRecipeExtension}";
