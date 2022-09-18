@@ -7,6 +7,8 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
+using Microsoft.Win32;
+using PluginSerialFormsGui.Properties;
 using PluginSerialLib;
 
 namespace PluginSerialFormsGui
@@ -14,40 +16,58 @@ namespace PluginSerialFormsGui
     internal class NoticationIconManager
     {
         public ContextMenu menu;
+
         public MenuItem mnuExit;
+        public MenuItem mnuStartup;
+        public MenuItem mnuRecipePath;
+
+        public MenuItem mnuCreateRecipe;
+
         public NotifyIcon notificationIcon;
 
         public Action OnExitClicked;
+        public Action<bool> OnStartupClicked;
+        public Action ChangeRecipePath;
+        public Action CreateRecipe;
 
         private RecipeManager recipeManager;
         private SerialPortManager portManager;
-        public NoticationIconManager(RecipeManager recipeManager, SerialPortManager portManager)
+        public NoticationIconManager(BaseForm baseform, RecipeManager recipeManager, SerialPortManager portManager)
         {
             this.recipeManager = recipeManager;
             this.portManager = portManager;
 
-            recipeManager.RecipeCollection.CollectionChanged +=RecipeCollectionOnCollectionChanged;
+            mnuExit = new MenuItem("Exit");
+            mnuExit.Click += (s, e) => OnExitClicked?.Invoke();
+            mnuStartup = new MenuItem("Start with windows");
+            mnuStartup.Checked = Settings.Default.AutoStart;
+            mnuStartup.Click += (s, e) => OnStartupClicked?.Invoke(mnuStartup.Checked);
+
+            mnuStartup.Click += (s, e) => { mnuStartup.Checked = !mnuStartup.Checked; };
+
+            mnuRecipePath = new MenuItem("Change recipe folder");
+            mnuRecipePath.Click += (s, e) => ChangeRecipePath?.Invoke();
+            mnuCreateRecipe = new MenuItem("Create recipe");
+            mnuCreateRecipe.Click += (s, e) => CreateRecipe?.Invoke();
+
+            recipeManager.RecipeCollection.CollectionChanged += RecipeCollectionOnCollectionChanged;
             portManager.OnPortAdded += OnPortAdded;
             portManager.OnPortRemoved += OnPortRemoved;
 
-            Thread notifyThread = new Thread(
-                delegate ()
-                {
 
-                    notificationIcon = new NotifyIcon()
-                    {
-                        Icon = SystemIcons.Hand,
-                        ContextMenu = menu,
-                        Text = "Plugin Serial"
-                    };
-                    notificationIcon.Visible = true;
-                    notificationIcon.MouseDown += NotificationIcon_MouseDown;
-                    Application.Run();
-                }
-            );
-            notifyThread.SetApartmentState(ApartmentState.STA);
-            notifyThread.Start();
+
+            baseform.notificationIcon = new NotifyIcon()
+            {
+                Icon = SystemIcons.Hand,
+                ContextMenu = menu,
+                Text = "Plugin Serial"
+            };
+            baseform.notificationIcon.Visible = true;
+            baseform.notificationIcon.MouseDown += NotificationIcon_MouseDown;
+
+
         }
+
 
         private void NotificationIcon_MouseDown(object sender, MouseEventArgs e)
         {
@@ -64,8 +84,11 @@ namespace PluginSerialFormsGui
 
         private void OnPortAdded(object sender, SerialPortManager.PortChangedEventArgs e)
         {
-            notificationIcon.ShowBalloonTip(1000, "New Serial port", $"New port: \"{e.Port.Port}\"", ToolTipIcon.Info);
+
         }
+
+
+
 
         private void RecipeCollectionOnCollectionChanged(object sender, NotifyCollectionChangedEventArgs e)
         {
@@ -77,8 +100,12 @@ namespace PluginSerialFormsGui
         {
 
             menu = new ContextMenu();
-            mnuExit = new MenuItem("Exit");
-            mnuExit.Click += (s,e) => OnExitClicked?.Invoke();
+
+            menu.MenuItems.Add(mnuCreateRecipe);
+
+            menu.MenuItems.Add(mnuStartup);
+            menu.MenuItems.Add(mnuRecipePath);
+            menu.MenuItems.Add("-");
 
             if (portManager.AvailablePorts.Count > 0)
             {
@@ -89,8 +116,9 @@ namespace PluginSerialFormsGui
             }
             else
             {
-                menu.MenuItems.Add(new MenuItem("No Ports Available"){Enabled = false});
+                menu.MenuItems.Add(new MenuItem("No Ports Available") { Enabled = false });
             }
+
 
             menu.MenuItems.Add("-");
             menu.MenuItems.Add(mnuExit);
@@ -121,7 +149,7 @@ namespace PluginSerialFormsGui
             }
 
             menu.MenuItems.Add("-");
-            var runningRecipe = recipeManager.GetRunningRecipe(port) ;
+            var runningRecipe = recipeManager.GetRunningRecipe(port);
             if (runningRecipe != null)
             {
                 var killRecipe = new MenuItem($"Kill running recipe: \n{runningRecipe.Recipe.Name}");

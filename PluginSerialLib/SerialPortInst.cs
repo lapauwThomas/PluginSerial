@@ -25,7 +25,29 @@ namespace PluginSerialLib
         public readonly string InstancePath;
         public readonly PortType Type;
 
-       
+        /// <summary>
+        /// Create a display string by checking if the string contains the COMxx designator. if not, append
+        /// </summary>
+        public string DisplayString
+        {
+            get
+            {
+                string normalized1 = Regex.Replace(FriendlyName, @"\s", "");
+
+                if (normalized1.Contains(Port))
+                {
+                    return FriendlyName;
+                }
+                else
+                {
+                    return $"{FriendlyName} - ({Port})";
+                }
+
+            }
+        }
+
+
+
         public bool valid { get; protected set; } = true;
 
         public bool IsDisconnected { get; protected set; } = false;

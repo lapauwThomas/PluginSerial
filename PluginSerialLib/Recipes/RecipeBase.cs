@@ -19,7 +19,7 @@ namespace PluginSerialLib
     {
 
 
-        public const string serialPlaceholderString = "{PORT}";
+        public const string serialPlaceholderString = "{@PORT}";
 
         public string RecipePath = null;
 
@@ -47,7 +47,7 @@ namespace PluginSerialLib
         [JsonProperty]
         public RecipeRuntype RunType;
 
-        public Icon Icon;
+        public Bitmap Icon;
 
        
 
@@ -58,15 +58,15 @@ namespace PluginSerialLib
         public string ProcessPath { get;  set; }
 
         [JsonProperty]
-        public IList<string>  ProcessArguments { get; set; }
+        public string  ProcessArguments { get; set; }
 
 
 
         [JsonProperty]
         protected string ICON_BASE64
         {
-            get => IconBase64Converter.IconToString(Icon);
-            set => Icon = IconBase64Converter.StringToIcon(value);
+            get => IconBase64Converter.BitmapToString(Icon);
+            set => Icon = IconBase64Converter.StringToBitmap(value);
         }
 
 

@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Drawing;
+using System.Drawing.Imaging;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -27,5 +28,22 @@ namespace PluginSerialLib
 
             return result;
         }
+        public static string BitmapToString(Bitmap image)
+        {
+            MemoryStream memory = new MemoryStream();
+            image.Save(memory, ImageFormat.Png);
+            string base64 = Convert.ToBase64String(memory.ToArray());
+            memory.Close();
+
+            return base64;
+        }
+        public static Bitmap StringToBitmap(string base64)
+        {
+            MemoryStream memory = new MemoryStream(Convert.FromBase64String(base64));
+            Bitmap result = new Bitmap(memory);
+            memory.Close();
+            return result;
+        
     }
+}
 }

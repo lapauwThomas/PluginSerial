@@ -22,9 +22,10 @@ namespace PluginSerialLib
         private Mutex mutex = new Mutex();
 
 
-        public EventHandler<PortChangedEventArgs> OnPortAdded;
-        public EventHandler<PortChangedEventArgs> OnPortRemoved;
+        public event EventHandler<PortChangedEventArgs> OnPortAdded;
+        public event EventHandler<PortChangedEventArgs> OnPortRemoved;
 
+        public event EventHandler<AvailablePortsChangedEventArgs> OnPortsChanged;
         public List<SerialPortInst> AvailablePorts => currentPorts.Values.ToList();
 
 
@@ -80,19 +81,22 @@ namespace PluginSerialLib
                 logger.Trace($"\t port {addedPort.Value.Port}");
             }
 
-
+            bool portsChanged = false;
 
             foreach (var removedPort in removedPorts)
             {
                 removedPort.Value.PortDisconnected();
-                OnPortRemoved.Invoke(this, new PortChangedEventArgs(removedPort.Value));
+                OnPortRemoved?.Invoke(this, new PortChangedEventArgs(removedPort.Value));
+                portsChanged = true;
 
             }
 
             foreach (var addedPort in addedPorts)
             {
-                OnPortAdded.Invoke(this, new PortChangedEventArgs(addedPort.Value));
+                OnPortAdded?.Invoke(this, new PortChangedEventArgs(addedPort.Value));
+                portsChanged = true;
             }
+
 
             currentPorts = newPorts;
 
@@ -102,11 +106,25 @@ namespace PluginSerialLib
                 logger.Trace($"\t port {port.Value.Port}");
             }
 
+            if (portsChanged)
+            {
+                OnPortsChanged?.Invoke(this, new AvailablePortsChangedEventArgs(ToPortList(addedPorts),ToPortList(removedPorts),ToPortList(currentPorts)));
+            }
+
             mutex.ReleaseMutex();
 
         }
 
+        public static List<SerialPortInst> ToPortList(IEnumerable<KeyValuePair<string, SerialPortInst>> source)
+        {
+            List<SerialPortInst> instlist = new List<SerialPortInst>();
+            foreach (var keyValuePair in source)
+            {
+                instlist.Add(keyValuePair.Value);
+            }
 
+            return instlist;
+        }
 
         public static SerialPortManager GetSerialPortManager()
         {
@@ -127,6 +145,19 @@ namespace PluginSerialLib
             }
         }
 
+        public class AvailablePortsChangedEventArgs
+        {
+            public List<SerialPortInst> AddedPorts;
+            public List<SerialPortInst> RemovedPorts;
+            public List<SerialPortInst> AvailablePorts;
+
+            public AvailablePortsChangedEventArgs(List<SerialPortInst> addedPorts, List<SerialPortInst> removedPorts, List<SerialPortInst> availablePorts)
+            {
+                AddedPorts = addedPorts;
+                RemovedPorts = removedPorts;
+                AvailablePorts = availablePorts;
+            }
+        }
 
     }
 

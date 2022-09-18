@@ -16,7 +16,7 @@ namespace PluginSerialLib
 
 
 
-        public static Process CreateAndInvokeProcess(string ProcessPath, IList<string> ProcessArguments, string serialport)
+        public static Process CreateAndInvokeProcess(string ProcessPath, string ProcessArguments, string serialport)
         {
 
             if (ProcessPath == null || string.IsNullOrEmpty(ProcessPath))
@@ -53,19 +53,7 @@ namespace PluginSerialLib
 
             if (ProcessArguments != null)
             {
-                StringBuilder sb = new StringBuilder();
-                foreach (var arg in ProcessArguments)
-                {
-                    if (arg.Contains(RecipeBase.serialPlaceholderString))
-                    {
-                        sb.Append(" " + arg.Replace(RecipeBase.serialPlaceholderString, serialport));
-                    }
-                    else
-                    {
-                        sb.Append(" " + arg);
-                    }
-                }
-                processArguments = sb.ToString();
+                processArguments = ProcessArguments.Replace(RecipeBase.serialPlaceholderString, serialport);
                 startInfo.Arguments = processArguments;
             }
 

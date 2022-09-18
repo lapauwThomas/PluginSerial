@@ -16,6 +16,11 @@ namespace PluginSerialLib
             Port = port;
         }
 
+        public void PortDisconnect()
+        {
+            if(Recipe.ProcessPolicy == ProcessKillPolicy.KillOnRemoval) EndRecipe();
+        }
+
         public abstract void EndRecipe();
 
         public static RecipeRunHandleBase CreateRecipeRunHandle(RecipeBase recipe, SerialPortInst port, Process proc = null)
@@ -81,17 +86,26 @@ namespace PluginSerialLib
 
         public override void EndRecipe()
         {
-            if (CurrentProcess != null && !CurrentProcess.HasExited)
+            try
             {
-                //kill the process, should trigger "Exited" eventhandler
-                CurrentProcess.Kill();
-                CurrentProcess.WaitForExit();
-                CurrentProcess.Dispose();
+                if (CurrentProcess != null && !CurrentProcess.HasExited)
+                {
+                    //kill the process, should trigger "Exited" eventhandler
+                    CurrentProcess.Kill();
+                    CurrentProcess.WaitForExit();
+                    CurrentProcess.Dispose();
+                }
+                else
+                {
+                    //if there was no process, trigger the cleanup
+                    Recipe.RecipeEnded();
+                }
             }
-            else
-            {   //if there was no process, trigger the cleanup
+            catch
+            {
                 Recipe.RecipeEnded();
             }
+           
         }
         /// <summary>
         /// Force the recipe to finish. Will kill the process if its running

@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Drawing;
 using System.Linq;
 using System.Net.Mime;
@@ -17,7 +18,7 @@ using Newtonsoft.Json.Serialization;
 using System.Reflection;
 using Microsoft.Toolkit.Uwp.Notifications;
 
-namespace PluginSerialConsoleTester
+namespace PluginSerialFormsGui
 {
     class Program
     {
@@ -69,7 +70,7 @@ namespace PluginSerialConsoleTester
                 Name = "Open Putty",
                 Description = "This is a test description",
                 RunType = RecipeRuntype.Ask,
-                Icon = SystemIcons.Hand,
+                Icon = SystemIcons.Hand.ToBitmap(),
                 ProcessPath = @"PuTTY.exe",
                 ProcessPolicy = ProcessKillPolicy.KillOnRemoval
             };
@@ -80,7 +81,7 @@ namespace PluginSerialConsoleTester
                 Name = "Create new recipe",
                 Description = "This is a test description",
                 RunType = RecipeRuntype.Ask,
-                Icon = SystemIcons.Hand,
+                Icon = SystemIcons.Hand.ToBitmap(),
                 ProcessPath = @"",
                 ProcessPolicy = ProcessKillPolicy.FireAndForget
             };
@@ -92,9 +93,9 @@ namespace PluginSerialConsoleTester
                 Name = "TestRecipe",
                 Description = "This is a test description",
                 RunType = RecipeRuntype.AutoRunIfOnly,
-                Icon = SystemIcons.Hand,
+                Icon = SystemIcons.Hand.ToBitmap(),
                 ProcessPath = @"PuTTY.exe",
-                ProcessArguments = new List<string>{@"-serial {PORT}", @"-sercfg 57600,8,n,1,N"},
+                ProcessArguments = @"-serial {@PORT} -sercfg 57600,8,n,1,N",
                 Filter =new ComportRecipe.ComportFilter("COM6"),
                 ProcessPolicy = ProcessKillPolicy.FireAndForget
             };
@@ -106,42 +107,42 @@ namespace PluginSerialConsoleTester
                 Name = "VidPidRecipe",
                 Description = "This is a test description",
                 RunType = RecipeRuntype.AutorunFinal,
-                Icon = SystemIcons.Hand,
+                Icon = SystemIcons.Hand.ToBitmap(),
                 ProcessPath = @"PuTTY.exe",
-                ProcessArguments = new List<string> { @"-serial {PORT}", @"-sercfg 115200,8,n,1,N" },
+                ProcessArguments =  @"-serial {@PORT} -sercfg 115200,8,n,1,N" ,
                 Filter = new VidPidRecipe.VidPidFilter("0403", "6001"),
                 ProcessPolicy = ProcessKillPolicy.KillOnRemoval
             };
             recipeManager.AddRecipe(vidpidrecipe);
 
-            VidPidRecipe Debugger = new VidPidRecipe
+            VidPidRecipe debuggerrecipe = new VidPidRecipe
             {
                 Name = "Debugger",
                 Description = "Digilent debugger",
                 RunType = RecipeRuntype.AutoRunIfOnly,
-                Icon = SystemIcons.Hand,
+                Icon = SystemIcons.Hand.ToBitmap(),
                 ProcessPath = @"PuTTY.exe",
-                ProcessArguments = new List<string> { @"-serial {PORT}", @"-sercfg 115200,8,n,1,N" },
+                ProcessArguments =  @"-serial {@PORT} -sercfg 115200,8,n,1,N" ,
                 Filter = new VidPidRecipe.VidPidFilter("0403", "6010"),
                 ProcessPolicy = ProcessKillPolicy.Keep
             };
-            recipeManager.AddRecipe(Debugger);
+            recipeManager.AddRecipe(debuggerrecipe);
 
             InstancePathRecipe CopenHagen = new InstancePathRecipe
             {
                 Name = "DEBUG Copenhagen",
                 Description = "Digilent debugger",
                 RunType = RecipeRuntype.AutoRunIfOnly,
-                Icon = SystemIcons.Hand,
+                Icon = SystemIcons.Hand.ToBitmap(),
                 ProcessPath = @"PuTTY.exe",
-                ProcessArguments = new List<string> { @"-serial {PORT}", @"-sercfg 115200,8,n,1,N" },
+                ProcessArguments =  @"-serial {PORT} -sercfg 115200,8,n,1,N" ,
                 Filter = new InstancePathRecipe.InstancePathFilter(@"FTDIBUS\VID_0403+PID_6010+210357AEA503B\0000"),
                 ProcessPolicy = ProcessKillPolicy.FireAndForget
             };
             recipeManager.AddRecipe(CopenHagen);
 
 
-            folderMonitor.WriteRecipeToFile(Debugger,folderMonitor.RecipeFolderPath);
+            folderMonitor.WriteRecipeToFile(debuggerrecipe, folderMonitor.RecipeFolderPath);
 
 
             Console.ReadLine();

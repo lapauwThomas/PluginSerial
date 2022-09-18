@@ -10,7 +10,7 @@ using PluginSerialLib.Recipes;
 
 namespace PluginSerialFormsGui
 {
-    internal class RecipeFolderMonitor
+    public class RecipeFolderMonitor
     {
 
 
@@ -41,7 +41,7 @@ namespace PluginSerialFormsGui
                                          | NotifyFilters.LastWrite;
 
 
-           // folderWatcher.Changed += OnRecipesFolderChanged;
+            // folderWatcher.Changed += OnRecipesFolderChanged;
             folderWatcher.Created += OnRecipesFolderChanged;
             folderWatcher.Deleted += OnRecipesFolderChanged;
             folderWatcher.Renamed += OnRecipesFolderChanged;
@@ -54,6 +54,14 @@ namespace PluginSerialFormsGui
             LoadFromFolder(recipeFolderPath);
         }
 
+        public bool WriteRecipeToFile(RecipeBase recipe, bool overwrite = false)
+        {
+            if (recipeCollection.HasRecipeWithName(recipe.Name) && !overwrite) return false;
+
+            WriteRecipeToFile(recipe, RecipeFolderPath);
+            return true;
+
+        }
         public void WriteRecipeToFile(RecipeBase recipe, string path, string OverrideFilename = null)
         {
             //folderWatcher.EnableRaisingEvents = false;
@@ -71,7 +79,7 @@ namespace PluginSerialFormsGui
         {
             string[] allfiles = Directory.GetFiles(path, $"*{ConfigManager.DefaultRecipeExtension}", SearchOption.TopDirectoryOnly);
 
-            List<RecipeBase> recipes =   new List<RecipeBase>();
+            List<RecipeBase> recipes = new List<RecipeBase>();
 
             foreach (string file in allfiles)
             {

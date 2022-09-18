@@ -166,6 +166,17 @@ namespace PluginSerialLib
             this.OnCollectionChanged(new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Remove, new List<RecipeBase>() { recipe }));
         }
 
+        public bool HasRecipeWithName(string name)
+        {
+            foreach (var recipe in ToList())
+            {
+                if (recipe.Name.Equals(name)) return true;
+                
+            }
+
+            return false;
+        }
+
         public new IEnumerator<RecipeBase> GetEnumerator()
         {
             return this.ToList().GetEnumerator();

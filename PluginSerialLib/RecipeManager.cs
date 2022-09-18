@@ -20,7 +20,8 @@ namespace PluginSerialLib
         private static Logger logger = LogManager.GetCurrentClassLogger();
         public RecipeCollection RecipeCollection { get; private set; }
 
-        public EventHandler<QueryRecipeEventArgs> OnQueryRecipeExecution;
+        public event EventHandler<QueryRecipeEventArgs> OnQueryRecipeExecution;
+        public event EventHandler<RecipeExecutedEventArgs> OnRecipeStarted; 
 
         public RecipeManager()
         {
@@ -69,7 +70,7 @@ namespace PluginSerialLib
 
             if (runningRecipes.ContainsKey(removedPort.Port))
             {
-                runningRecipes[removedPort.Port].EndRecipe();
+                runningRecipes[removedPort.Port].PortDisconnect();
             }
         }
 
@@ -133,6 +134,7 @@ namespace PluginSerialLib
                         runningRecipes.Remove(port.Port);
                     };
                 }
+                OnRecipeStarted?.Invoke(this, new RecipeExecutedEventArgs(recipe, port));
             }
 
             return runstatus;
@@ -160,6 +162,8 @@ namespace PluginSerialLib
 
             return null;
         }
+
+      
 
         public class QueryRecipeEventArgs : EventArgs
         {
